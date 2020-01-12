@@ -10,20 +10,33 @@ router.get(
     usersController.getUsers
 );
 
-router.post(
-    '/signup',
-    [
-        check('username')
-            .not()
-            .isEmpty(),
-        check('password').isLength({ min: 6 })
-    ],
-    usersController.signUp
+router.get(
+    '/:pid',
+    usersController.getUserById
 );
 
-router.post(
-    '/login',
-    usersController.login
-);
+// router.post(
+//     '/signup',
+//     [
+//         check('username')
+//             .not()
+//             .isEmpty(),
+//         check('password').isLength({ min: 6 })
+//     ],
+//     usersController.signUp
+// );
+//
+// router.post(
+//     '/login',
+//     [
+//         check('username')
+//             .not()
+//             .isEmpty(),
+//         check('password')
+//             .not()
+//             .isEmpty(),
+//     ],
+//     usersController.login
+// );
 
 module.exports = router;

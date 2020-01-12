@@ -5,6 +5,8 @@ const mongoose = require('mongoose');
 const HttpError = require('../models/http-error');
 const Blog = require('../models/blog');
 const User = require('../models/user');
+const CommentThread = require('../models/comment-thread');
+const utils = require('../utils/utils');
 
 const getBlogs = async (req, res, next) => {
     let blogs;
@@ -15,7 +17,11 @@ const getBlogs = async (req, res, next) => {
             new HttpError('Failed to get blogs', 500)
         );
     }
-    res.json( { blogs: blogs.map(blog => blog.toObject({ getters: true }))})
+    res.json({
+        blogs:
+            blogs.map(blog => blog.toObject({getters:true})
+            )
+    });
 };
 
 const getBlogById = async (req, res, next) => {
@@ -23,7 +29,7 @@ const getBlogById = async (req, res, next) => {
 
     let blog;
     try {
-        blog = await Blog.findById().populate('comments')
+        blog = await Blog.findById(blogId).populate('commentThread')
     } catch (e) {
         return next(new HttpError('Failed to get blog by id'), 500)
     }
@@ -71,10 +77,19 @@ const createBlog = async (req, res, next) => {
         );
     }
 
+    // const newCommentThread = new CommentThread({
+    // });
+    //
+    // try {
+    //     await newCommentThread.save()
+    // } catch (e) {
+    //     return next(new HttpError('Failed to create comment thread, please try again later', 500))
+    // }
+
     let createdBlog = new Blog({
         title,
         author: user,
-        content
+        content,
     });
 
 
@@ -92,7 +107,16 @@ const createBlog = async (req, res, next) => {
         );
     }
 
-    res.status(201).json({ blog: createdBlog })
+    res.status(201).json({
+        blog:
+            {
+                ...createdBlog.toObject(),
+                author:
+                    {
+                        username: createdBlog.author.username
+                    }
+            }
+    }) // returning a modified version where the author field only contains username
 };
 
 exports.getBlogs = getBlogs;
