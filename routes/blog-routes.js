@@ -20,6 +20,11 @@ router.get(
     blogsController.getBlogsByUserId
 );
 
+router.get(
+    '/commentthread/:tid',
+    commentController.getCommentThreadById
+);
+
 router.post(
     '/create_blog',
     [
@@ -32,14 +37,14 @@ router.post(
     ],
     blogsController.createBlog
 );
-
+//
 router.post(
     '/create_comment',
     [
         check('authorId')
             .not()
             .isEmpty(),
-        check('postId')
+        check('threadId')
             .not()
             .isEmpty(),
         check('content')

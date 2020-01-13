@@ -1,26 +1,23 @@
 const { validationResult } = require('express-validator');
 
-const mongoose = require('mongoose');
+const db = require('../queries');
 
-const HttpError = require('../models/http-error');
-const Blog = require('../models/blog');
-const User = require('../models/user');
-const CommentThread = require('../models/comment-thread');
-const utils = require('../utils/utils');
 
 const getBlogs = async (req, res, next) => {
     let blogs;
     try {
-        blogs = await Blog.find();
+        blogs = await db.query('SELECT * FROM blogs');
+        blogs = blogs.rows;
     } catch (e) {
-        return next(
-            new HttpError('Failed to get blogs', 500)
-        );
+        return res.status(500).json({
+            status: 'error',
+            message: 'Failed to get blogs'
+        })
     }
+
     res.json({
         blogs:
-            blogs.map(blog => blog.toObject({getters:true})
-            )
+            blogs.map(blog => blog)
     });
 };
 
@@ -29,12 +26,16 @@ const getBlogById = async (req, res, next) => {
 
     let blog;
     try {
-        blog = await Blog.findById(blogId).populate('commentThread')
+        blog = await db.query("SELECT * FROM blogs WHERE b_id = $1", [blogId]);
+        blog = blog.rows[0]
     } catch (e) {
-        return next(new HttpError('Failed to get blog by id'), 500)
+        return res.status(500).json({
+            status: 'error',
+            message: 'Failed to get blog'
+        })
     }
 
-    res.json( {blog: blog.toObject({ getters: true })})
+    res.json( {blog: blog} )
 };
 
 const getBlogsByUserId = async (req, res, next) => {
@@ -42,81 +43,77 @@ const getBlogsByUserId = async (req, res, next) => {
 
     let userWithBlogs;
     try {
-        userWithBlogs = await User.findById(userId).populate('blogPosts')
+        userWithBlogs = await db.query('SELECT * FROM blogs WHERE author = $1', [userId]);
+        userWithBlogs = userWithBlogs.rows;
     } catch (e) {
-        return next(
-            new HttpError('Could not find Blogs by User id', 500)
-        );
+        return res.status(500).json({
+            status: 'error',
+            message: 'Failed to get blog by user id'
+        })
     }
 
-    res.json({ blogs: userWithBlogs.blogPosts.map(blog =>
-            blog.toObject({ getters: true })
-        )})
+    res.json({ blogs: userWithBlogs.map(blog =>
+            blog
+        )
+    })
 };
 
 const createBlog = async (req, res, next) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
-        return next(
-            new HttpError('Invalid inputs passed, please check your data.', 422)
-        );
+        return res.status(401).json({
+            status: 'error',
+            message: 'Invalid input please try again.'
+        })
     }
-    const { title, author, content } = req.body;
+    const { title, authorId, content } = req.body;
 
     let user;
     try {
-        user = await User.findById(author);
-    } catch (e) {
-        return next(
-            new HttpError('Failed to create blog, please try again later'), 500
-        );
-    }
-    if (!user) {
-        return next(
-            new HttpError('Could not find user with provided id', 404)
-        );
-    }
-
-    // const newCommentThread = new CommentThread({
-    // });
-    //
-    // try {
-    //     await newCommentThread.save()
-    // } catch (e) {
-    //     return next(new HttpError('Failed to create comment thread, please try again later', 500))
-    // }
-
-    let createdBlog = new Blog({
-        title,
-        author: user,
-        content,
-    });
-
-
-    try {
-        const sess = await mongoose.startSession();
-        sess.startTransaction();
-        await createdBlog.save({ session: sess });
-        user.blogPosts.push(createdBlog);
-        await user.save({ session: sess });
-        await sess.commitTransaction();
+        user = await db.query('SELECT username, intraid FROM users WHERE u_id = $1', [authorId]);
+        user = user.rows[0]
     } catch (e) {
         console.log(e);
-        return next(
-            new HttpError('Failed to create blog, please try again later',  500)
-        );
+        return res.status(500).json({
+            status: 'error',
+            message: 'Failed to create blog, please try again later'
+        })
+    }
+    if (!user) {
+        return res.status(404).json({
+            status: 'error',
+            message: 'Could not find user with provided id'
+        })
     }
 
-    res.status(201).json({
-        blog:
-            {
-                ...createdBlog.toObject(),
-                author:
-                    {
-                        username: createdBlog.author.username
-                    }
-            }
-    }) // returning a modified version where the author field only contains username
+    const client = await db.connect();
+    let createdBlog;
+    try{
+        await client.query('BEGIN');
+        let res = await client.query('INSERT INTO commentthreads DEFAULT VALUES RETURNING t_id');
+        res = res.rows[0];
+        createdBlog = await client.query(
+            'INSERT INTO blogs(title, content, author, commentthread) VALUES($1, $2, $3, $4) RETURNING b_id, title, content, author, commentthread',
+            [
+                title,
+                content,
+                authorId,
+                res.t_id
+            ]
+        );
+        await client.query('COMMIT');
+    } catch (e) {
+        await client.query('ROLLBACK');
+        console.log(e);
+        return res.status(500).json({
+            status: 'error',
+            message: 'Failed to create blogpost, please try again later.'
+        })
+    } finally {
+        client.release();
+    }
+
+    res.status(201).json({blog: createdBlog.rows[0]})
 };
 
 exports.getBlogs = getBlogs;

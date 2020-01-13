@@ -1,78 +1,97 @@
 const { validationResult } = require('express-validator');
 
-const mongoose = require('mongoose');
-const HttpError = require('../models/http-error');
-const User = require('../models/user');
-const Comment = require('../models/comment');
-const Blog = require('../models/blog');
+const db = require('../queries');
 
-const commentThread = require('../models/comment-thread');
+const getCommentThreadById = async (req, res, next) => {
+    const { tid } = req.params;
+
+    let commentThread;
+    try {
+        commentThread = await db.query(
+            'SELECT commentcontent, author, parentthread, childthread, username ' +
+            'FROM comments JOIN users ON comments.parentthread = $1 AND comments.author = users.u_id',
+            [tid]
+        );
+        commentThread = commentThread.rows;
+    } catch (e) {
+        return res.status(500).json({
+            status: 'error',
+            message: 'Failed to retrieve comments.'
+        })
+    }
+    res.json({ comments: commentThread.map(comment => comment)})
+};
 
 const createComment = async (req, res, next) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
-        return next(
-            new HttpError('Invalid inputs passed, please check your data.', 422)
-        );
+        return res.status(401).json({
+            status: 'error',
+            message: 'Invalid inputs passed, please check your data.'
+        })
     }
 
-    const { postId, content, authorId } = req.body;
+    const { threadId, content, authorId } = req.body;
 
-    let blogPost;
+    let thread;
     try {
-        blogPost = await Blog.findById(postId)
+        thread = await db.query('SELECT * FROM commentthreads WHERE t_id = $1', [threadId])
+        if (!(thread = thread.rows[0]))
+            return res.status(401).json({
+                status: 'error',
+                message: 'Failed to find comment thread with the given thread id'
+            })
     } catch (e) {
-        return next(
-            new HttpError('Failed to create comment, please try again later', 500)
-        )
+        return res.status(500).json({
+            status: 'error',
+            message: 'Failed to create comment, please try again later'
+        })
     }
+
     let commentAuthor;
     try {
-        commentAuthor = await User.findById(authorId);
+        commentAuthor = await db.query('SELECT username, intraid FROM users WHERE u_id = $1', [authorId]);
+        if (!(commentAuthor = commentAuthor.rows[0]))
+            return res.status(401).json({
+                status: 'error',
+                message: 'Failed to find user with the given user id'
+            })
     } catch (e) {
-        return next(
-            new HttpError('Failed to create comment, please try again later', 500)
-        )
+        return res.status(500).json({
+            status: 'error',
+            message: 'Failed to create comment, please try again later'
+        })
     }
 
-    if (!commentAuthor || !blogPost) {
-        return next(
-            new HttpError('Invalid input, please try again', 401)
-        )
-    }
-
-
-    const createdComment = new Comment({
-        content,
-        post: blogPost,
-        author: commentAuthor.toObject({ getters: true }),
-    });
-
-    try {
-        const sess = await mongoose.startSession();
-        sess.startTransaction();
-        await createdComment.save({ session: sess });
-        blogPost.comments.push(createdComment);
-        await blogPost.save({ session: sess });
-        await sess.commitTransaction();
-    } catch (e) {
-        console.log(e);
-        return next(
-            new HttpError('Failed to create comment, please try again later',  500)
+    const client = await db.connect();
+    let createdComment;
+    try{
+        await client.query('BEGIN');
+        let res = await client.query('INSERT INTO commentthreads DEFAULT VALUES RETURNING t_id');
+        res = res.rows[0];
+        createdComment = await client.query(
+            'INSERT INTO comments(commentcontent, author, parentthread, childthread) VALUES($1, $2, $3, $4) RETURNING c_id, commentcontent, author, parentthread, childthread',
+            [
+                content,
+                authorId,
+                threadId,
+                res.t_id
+            ]
         );
+        await client.query('COMMIT');
+    } catch (e) {
+        await client.query('ROLLBACK');
+        console.log(e);
+        return res.status(500).json({
+            status: 'error',
+            message: 'Failed to create comment, please try again later.'
+        })
+    } finally {
+        client.release();
     }
     res.status(201).json({
-        comment: {
-            content,
-            author: {
-                username: commentAuthor.username,
-            },
-            likes: 0,
-            comments: blogPost.toObject({ getters: true })
-        }
+        comment: { ...createdComment.rows[0], author: commentAuthor }
     })
 };
-
-const
-
+exports.getCommentThreadById = getCommentThreadById;
 exports.createComment = createComment;
