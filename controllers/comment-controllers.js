@@ -2,6 +2,8 @@ const { validationResult } = require('express-validator');
 
 const db = require('../queries');
 
+
+
 const getCommentThreadById = async (req, res) => {
     const { tid } = req.params;
 
@@ -21,6 +23,8 @@ const getCommentThreadById = async (req, res) => {
     }
     res.json({ comments: commentThread.map(comment => comment)})
 };
+
+
 
 const createComment = async (req, res, next) => {
     const errors = validationResult(req);
@@ -93,5 +97,6 @@ const createComment = async (req, res, next) => {
         comment: { ...createdComment.rows[0], author: commentAuthor }
     })
 };
+
 exports.getCommentThreadById = getCommentThreadById;
 exports.createComment = createComment;

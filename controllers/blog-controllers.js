@@ -3,7 +3,9 @@ const { validationResult } = require('express-validator');
 const db = require('../queries');
 
 
+
 const getBlogs = async (req, res, next) => {
+
     let blogs;
     try {
         blogs = await db.query('SELECT * FROM blogs');
@@ -20,6 +22,8 @@ const getBlogs = async (req, res, next) => {
             blogs.map(blog => blog)
     });
 };
+
+
 
 const getBlogById = async (req, res, next) => {
     const blogId = req.params.bid;
@@ -38,7 +42,10 @@ const getBlogById = async (req, res, next) => {
     res.json( {blog: blog} )
 };
 
+
+
 const getBlogsByUserId = async (req, res, next) => {
+
     const userId = req.params.uid;
 
     let userWithBlogs;
@@ -52,13 +59,13 @@ const getBlogsByUserId = async (req, res, next) => {
         })
     }
 
-    res.json({ blogs: userWithBlogs.map(blog =>
-            blog
-        )
-    })
+    res.json({ blogs: userWithBlogs.map(blog => blog)})
 };
 
+
+
 const createBlog = async (req, res, next) => {
+
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
         return res.status(401).json({
@@ -66,6 +73,7 @@ const createBlog = async (req, res, next) => {
             message: 'Invalid input please try again.'
         })
     }
+
     const { title, authorId, content } = req.body;
 
     let user;
@@ -87,6 +95,7 @@ const createBlog = async (req, res, next) => {
     }
 
     const client = await db.connect();
+
     let createdBlog;
     try{
         await client.query('BEGIN');

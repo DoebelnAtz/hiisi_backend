@@ -4,8 +4,12 @@ const bcrypt = require('bcryptjs');
 const db = require('../queries');
 const dbUsers = require('../db-utils/db-user');
 
+
+
 const getUserFriends = async (req, res, next) => {
+
     const { uid } = req.params;
+
     let friends;
     try {
         friends = await db.query(
@@ -23,7 +27,10 @@ const getUserFriends = async (req, res, next) => {
     res.json({friends: friends.map(friend => friend)});
 };
 
+
+
 const getUsers = async (req, res, next) => {
+
     let users;
     try {
         users = await db.query('SELECT u_id, username, intraid, profile_pic FROM users');
@@ -31,12 +38,16 @@ const getUsers = async (req, res, next) => {
     } catch (e) {
         return console.log('ERROR: ' + e);
     }
-    console.log(users);
+
     res.json({users: users.map(user => user)});
 };
 
+
+
 const getUserById = async (req, res, next) => {
+
     const userId = req.params.pid;
+
     let user;
     try {
         user = await db.query('SELECT id, username FROM users WHERE u_id = $1', [userId]);
@@ -44,11 +55,13 @@ const getUserById = async (req, res, next) => {
     } catch (e) {
         return console.log('ERROR: ' + e);
     }
-    console.log(user);
     res.json({user: user});
 };
 
+
+
 const signUp = async (req, res, next) => {
+
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
         return res.status(401).json({
@@ -56,6 +69,7 @@ const signUp = async (req, res, next) => {
             message: 'Invalid input.'
         })
     }
+
     const {username, password, intraId} = req.body;
 
     let existingUser;
@@ -98,7 +112,10 @@ const signUp = async (req, res, next) => {
     res.status(201).json({createdUser: createdUser });
 };
 
+
+
 const login = async (req, res, next) => {
+
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
         return res.status(400).json({
@@ -148,7 +165,10 @@ const login = async (req, res, next) => {
     res.json({ status: 'success', message: 'logged in!' })
 };
 
+
+
 const searchUsers = async (req, res, next) => {
+
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
         return res.status(401).json({
@@ -158,6 +178,7 @@ const searchUsers = async (req, res, next) => {
     }
 
     const { search } = req.body;
+
     let usersFound;
     try {
         usersFound = await db.query("SELECT u_id, username, intraid FROM users WHERE username LIKE $1", [search + '%']);
