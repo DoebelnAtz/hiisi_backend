@@ -2,7 +2,7 @@ const { validationResult } = require('express-validator');
 
 const db = require('../queries');
 
-const getCommentThreadById = async (req, res, next) => {
+const getCommentThreadById = async (req, res) => {
     const { tid } = req.params;
 
     let commentThread;
