@@ -2,7 +2,7 @@ const express = require('express');
 const { check } = require('express-validator');
 
 const usersController = require('../controllers/users-controllers');
-
+const api = require('../scheduled-jobs/update-users');
 const router = express.Router();
 
 router.get(
@@ -16,9 +16,15 @@ router.get(
 );
 
 router.get(
+    '/api',
+    () => api.intraApi('/users/61979')
+);
+
+router.get(
     '/:pid',
     usersController.getUserById
 );
+
 
 router.post(
     '/signup',
