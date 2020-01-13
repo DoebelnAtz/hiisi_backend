@@ -4,10 +4,29 @@ const bcrypt = require('bcryptjs');
 const db = require('../queries');
 const dbUsers = require('../db-utils/db-user');
 
+const getUserFriends = async (req, res, next) => {
+    const { uid } = req.params;
+    let friends;
+    try {
+        friends = await db.query(
+            'SELECT u_id, username, profile_pic ' +
+            'FROM users JOIN friends ON users.u_id = friends.two_id AND friends.one_id = $1',
+            [uid]
+        ); // not very descriptive column names (google many to many relationship)...
+        friends = friends.rows;
+    } catch (e) {
+        return res.status(500).json({
+            status: 'error',
+            message: 'Failed to get friends'
+        })
+    }
+    res.json({friends: friends.map(friend => friend)});
+};
+
 const getUsers = async (req, res, next) => {
     let users;
     try {
-        users = await db.query('SELECT * FROM users');
+        users = await db.query('SELECT u_id, username, intraid, profile_pic FROM users');
         users = users.rows;
     } catch (e) {
         return console.log('ERROR: ' + e);
@@ -74,7 +93,7 @@ const signUp = async (req, res, next) => {
         hashedPassword,
     };
 
-    createdUser = await dbUsers.createUser(createdUser);
+    createdUser = await dbUsers.createUser(createdUser, res);
 
     res.status(201).json({createdUser: createdUser });
 };
@@ -129,7 +148,33 @@ const login = async (req, res, next) => {
     res.json({ status: 'success', message: 'logged in!' })
 };
 
+const searchUsers = async (req, res, next) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+        return res.status(401).json({
+            status: 'error',
+            message: 'Invalid search input, please try again.'
+        })
+    }
+
+    const { search } = req.body;
+    let usersFound;
+    try {
+        usersFound = await db.query("SELECT u_id, username, intraid FROM users WHERE username LIKE $1", [search + '%']);
+        usersFound = usersFound.rows;
+    } catch (e) {
+        console.log(e);
+        return res.status(500).json({
+            status: 'error',
+            message: 'Failed to search for users'
+        })
+    }
+    res.json({found: usersFound.map(user => user)})
+};
+
+exports.getUserFriends = getUserFriends;
 exports.getUsers = getUsers;
 exports.getUserById = getUserById;
 exports.signUp = signUp;
 exports.login = login;
+exports.searchUsers = searchUsers;
