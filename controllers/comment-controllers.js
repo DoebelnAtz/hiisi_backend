@@ -26,7 +26,7 @@ const getCommentThreadById = async (req, res) => {
 
 
 
-const createComment = async (req, res, next) => {
+const createComment = async (req, res) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
         return res.status(401).json({

@@ -6,7 +6,7 @@ const dbUsers = require('../db-utils/db-user');
 
 
 
-const getUserFriends = async (req, res, next) => {
+const getUserFriends = async (req, res) => {
 
     const { uid } = req.params;
 
@@ -29,7 +29,7 @@ const getUserFriends = async (req, res, next) => {
 
 
 
-const getUsers = async (req, res, next) => {
+const getUsers = async (req, res) => {
 
     let users;
     try {
@@ -44,13 +44,13 @@ const getUsers = async (req, res, next) => {
 
 
 
-const getUserById = async (req, res, next) => {
+const getUserById = async (req, res) => {
 
     const userId = req.params.pid;
 
     let user;
     try {
-        user = await db.query('SELECT id, username FROM users WHERE u_id = $1', [userId]);
+        user = await db.query('SELECT u_id, username, profile_pic, intraid FROM users WHERE u_id = $1', [userId]);
         user = user.rows[0];
     } catch (e) {
         return console.log('ERROR: ' + e);
@@ -60,7 +60,7 @@ const getUserById = async (req, res, next) => {
 
 
 
-const signUp = async (req, res, next) => {
+const signUp = async (req, res) => {
 
     const errors = validationResult(req);
     if (!errors.isEmpty()) {

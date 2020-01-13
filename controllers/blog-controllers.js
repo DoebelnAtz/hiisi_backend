@@ -4,7 +4,23 @@ const db = require('../queries');
 
 
 
-const getBlogs = async (req, res, next) => {
+const getBlogs = async (req, res) => {
+
+    let sender;
+
+    if (req.method === "POST") {
+        const { senderId } = req.body;
+
+        try {
+            sender = await db.query('SELECT blog_id FROM users join likedposts ON likedposts.user_id = $1', [senderId]);
+            sender = sender.rows.map(row => row.blog_id);
+        } catch (e) {
+            return res.status(500).json({
+                status: 'error',
+                message: 'Failed to get blogs'
+            })
+        }
+    }
 
     let blogs;
     try {
@@ -19,13 +35,20 @@ const getBlogs = async (req, res, next) => {
 
     res.json({
         blogs:
-            blogs.map(blog => blog)
+            blogs.map(blog => {
+                return (
+                    {
+                        ...blog,
+                        liked: (sender ? sender.includes(blog.b_id) : false)
+                    }
+                )
+            })
     });
 };
 
 
 
-const getBlogById = async (req, res, next) => {
+const getBlogById = async (req, res) => {
     const blogId = req.params.bid;
 
     let blog;
@@ -44,7 +67,7 @@ const getBlogById = async (req, res, next) => {
 
 
 
-const getBlogsByUserId = async (req, res, next) => {
+const getBlogsByUserId = async (req, res) => {
 
     const userId = req.params.uid;
 
@@ -64,7 +87,7 @@ const getBlogsByUserId = async (req, res, next) => {
 
 
 
-const createBlog = async (req, res, next) => {
+const createBlog = async (req, res) => {
 
     const errors = validationResult(req);
     if (!errors.isEmpty()) {

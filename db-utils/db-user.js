@@ -19,8 +19,6 @@ const createUser = async (userObj, res) => {
         })
     }
 
-
-
     return (createdUser.rows[0]);
 };
 
