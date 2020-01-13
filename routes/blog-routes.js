@@ -27,7 +27,14 @@ router.get(
     blogsController.getBlogsByUserId
 );
 
+// Same as blogs, we can get comment threads by POST or GET to check likes,
+
 router.get(
+    '/commentthread/:tid',
+    commentController.getCommentThreadById
+);
+
+router.post(
     '/commentthread/:tid',
     commentController.getCommentThreadById
 );

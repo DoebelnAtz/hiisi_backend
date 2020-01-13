@@ -7,10 +7,38 @@ const db = require('../queries');
 const getCommentThreadById = async (req, res) => {
     const { tid } = req.params;
 
+    let sender;
+
+    if (req.method === "POST") {
+        const { senderId } = req.body;
+
+        try { // could be optimized by returning necessary comment data through comments JOIN voted..., keep as is for now..
+            sender = await db.query(
+                'SELECT comment_id, vote ' +
+                'FROM users join votedcomments ON votedcomments.user_id = users.u_id AND users.u_id = $1',
+                [senderId]
+            );
+            sender = sender.rows.map(row => {
+                return (
+                    {
+                        c_id: row.comment_id,
+                        vote: row.vote
+                    }
+                    )
+            }
+            );
+        } catch (e) {
+            return res.status(500).json({
+                status: 'error',
+                message: 'Failed to get blogs'
+            })
+        }
+    }
+
     let commentThread;
     try {
         commentThread = await db.query(
-            'SELECT commentcontent, author, parentthread, childthread, username ' +
+            'SELECT c_id, commentcontent, author, parentthread, childthread, username ' +
             'FROM comments JOIN users ON comments.parentthread = $1 AND comments.author = users.u_id',
             [tid]
         );
@@ -21,7 +49,27 @@ const getCommentThreadById = async (req, res) => {
             message: 'Failed to retrieve comments.'
         })
     }
-    res.json({ comments: commentThread.map(comment => comment)})
+    if (req.method === 'POST') {
+        res.json({ comments: commentThread.map(comment =>
+            {
+                return (
+                    {
+                        ...comment,
+                        vote: sender.find(v =>
+                        {
+                            return (v.c_id === comment.c_id)
+                        })
+                            ? sender.find(v => v.c_id === comment.c_id).vote : "no"
+                        // sends true if up voted, false if down voted,
+                        // 'no' if not voted.. not perfect, table value is boolean, worth changing?
+                    }
+                )
+            }
+            )})
+    }
+    else {
+        res.json({comments: commentThread.map(comment => comment)})
+    }
 };
 
 
