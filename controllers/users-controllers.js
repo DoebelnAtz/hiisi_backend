@@ -59,7 +59,7 @@ const getUsers = async (req, res) => {
         })
     }
 
-    res.json({users: users.map(user => user)});
+    res.json( users.map(user => user));
 };
 
 
@@ -70,7 +70,22 @@ const getUserById = async (req, res) => {
 
     let user;
     try {
-        user = await db.query('SELECT u_id, username, profile_pic, intraid FROM users WHERE u_id = $1', [userId]);
+        user = await db.query(
+            'SELECT ' +
+            'u_id, ' +
+            'username, ' +
+            'intraid, ' +
+            'profile_pic, ' +
+            'coalitionpoints, ' +
+            'coalition_rank, ' +
+            'grade, ' +
+            'level, ' +
+            'class_of, ' +
+            'wallet, ' +
+            'location, ' +
+            'active, ' +
+            'correctionpoints ' +
+            'FROM users WHERE u_id = $1', [userId]);
         user = user.rows[0];
     } catch (e) {
         return res.status(500).json({
@@ -85,7 +100,7 @@ const getUserById = async (req, res) => {
         })
     }
 
-    res.json({user: user});
+    res.json(user);
 };
 
 
@@ -158,13 +173,13 @@ const login = async (req, res, next) => {
 
     let existingUser;
     try {
-        existingUser = await db.query('SELECT * FROM users WHERE username = $1', [username]);
+        existingUser = await db.query('SELECT username, u_id, password FROM users WHERE username = $1', [username]);
         existingUser = existingUser.rows[0];
     } catch (e) {
         console.log(e);
         return res.status(500).json({
             status: 'error',
-            message: 'Sign up failed, please try again later.'
+            message: 'Log in failed, please try again later.'
         });
     }
 
@@ -179,6 +194,7 @@ const login = async (req, res, next) => {
     try {
         isValidPass = await bcrypt.compare(password, existingUser.password)
     } catch (e) {
+        console.log(e);
         return res.status(500).json({
             status: 'error',
             message: 'Log in failed, please try again later.'
@@ -200,7 +216,8 @@ const login = async (req, res, next) => {
     res.json({
         success: true,
         message: 'Authentication successful!',
-        token: token
+        token: token,
+        user: existingUser
     });
 };
 
@@ -220,7 +237,7 @@ const searchUsers = async (req, res, next) => {
 
     let usersFound;
     try {
-        usersFound = await db.query("SELECT u_id, username, intraid FROM users WHERE username LIKE $1", [search + '%']);
+        usersFound = await db.query("SELECT u_id, username, intraid, profile_pic FROM users WHERE username LIKE $1", [search + '%']);
         usersFound = usersFound.rows;
     } catch (e) {
         console.log(e);
@@ -229,7 +246,7 @@ const searchUsers = async (req, res, next) => {
             message: 'Failed to search for users'
         })
     }
-    res.json({found: usersFound.map(user => user)})
+    res.json(usersFound.map(user => user))
 };
 
 exports.getUserFriends = getUserFriends;

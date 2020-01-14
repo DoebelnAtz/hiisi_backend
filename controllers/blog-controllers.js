@@ -24,7 +24,7 @@ const getBlogs = async (req, res) => {
     let blogs;
     try {
         blogs = await db.query(
-            'SELECT b_id, content, title, published_date, commentthread, u_id, username FROM blogs JOIN users ON blogs.author = users.u_id'
+            'SELECT b_id, content, title, published_date, commentthread, likes, u_id, username FROM blogs JOIN users ON blogs.author = users.u_id ORDER BY likes DESC, published_date DESC'
         );
         blogs = blogs.rows;
     } catch (e) {
@@ -99,7 +99,7 @@ const createBlog = async (req, res) => {
         })
     }
 
-    const { title, authorId, content } = req.body;
+    const { title, authorId, content, published_date } = req.body;
 
     let user;
     try {
@@ -127,12 +127,13 @@ const createBlog = async (req, res) => {
         let res = await client.query('INSERT INTO commentthreads DEFAULT VALUES RETURNING t_id');
         res = res.rows[0];
         createdBlog = await client.query(
-            'INSERT INTO blogs(title, content, author, commentthread) VALUES($1, $2, $3, $4) RETURNING b_id, title, content, author, commentthread',
+            'INSERT INTO blogs(title, content, author, commentthread, published_date) VALUES($1, $2, $3, $4, $5) RETURNING b_id, title, content, author, commentthread, likes, published_date',
             [
                 title,
                 content,
                 authorId,
-                res.t_id
+                res.t_id,
+                published_date
             ]
         );
         await client.query('COMMIT');
@@ -147,7 +148,7 @@ const createBlog = async (req, res) => {
         client.release();
     }
 
-    res.status(201).json({blog: createdBlog.rows[0]})
+    res.status(201).json(createdBlog.rows[0])
 };
 
 exports.getBlogs = getBlogs;
