@@ -5,6 +5,7 @@ const usersController = require('../controllers/users-controllers');
 const api = require('../scheduled-jobs/update-users');
 const router = express.Router();
 
+
 router.get(
     '/friends/:uid',
     usersController.getUserFriends
@@ -26,32 +27,7 @@ router.get(
 );
 
 
-router.post(
-    '/signup',
-    [
-        check('username')
-            .not()
-            .isEmpty(),
-        check('intraId')
-            .not()
-            .isEmpty(),
-        check('password').isLength({ min: 6 })
-    ],
-    usersController.signUp
-);
 
-router.post(
-    '/login',
-    [
-        check('username')
-            .not()
-            .isEmpty(),
-        check('password')
-            .not()
-            .isEmpty(),
-    ],
-    usersController.login
-);
 
 router.post(
     '/search',

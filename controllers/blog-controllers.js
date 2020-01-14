@@ -8,33 +8,35 @@ const getBlogs = async (req, res) => {
 
     let sender;
 
-    if (req.method === "POST") {
-        const { senderId } = req.body;
+    const { senderId } = req.body;
 
-        try {
-            sender = await db.query('SELECT blog_id FROM users join likedposts ON likedposts.user_id = $1', [senderId]);
-            sender = sender.rows.map(row => row.blog_id);
-        } catch (e) {
-            return res.status(500).json({
-                status: 'error',
-                message: 'Failed to get blogs'
-            })
-        }
-    }
-
-    let blogs;
     try {
-        blogs = await db.query('SELECT * FROM blogs');
-        blogs = blogs.rows;
+        sender = await db.query('SELECT blog_id FROM users join likedposts ON likedposts.user_id = $1', [senderId]);
+        sender = sender.rows.map(row => row.blog_id);
     } catch (e) {
+        console.log(e);
         return res.status(500).json({
             status: 'error',
             message: 'Failed to get blogs'
         })
     }
 
-    res.json({
-        blogs:
+    let blogs;
+    try {
+        blogs = await db.query(
+            'SELECT b_id, content, title, published_date, commentthread, u_id, username FROM blogs JOIN users ON blogs.author = users.u_id'
+        );
+        blogs = blogs.rows;
+    } catch (e) {
+        console.log(e);
+        return res.status(500).json({
+            status: 'error',
+            message: 'Failed to get blogs'
+        })
+    }
+
+    res.json(
+
             blogs.map(blog => {
                 return (
                     {
@@ -43,7 +45,7 @@ const getBlogs = async (req, res) => {
                     }
                 )
             })
-    });
+    );
 };
 
 

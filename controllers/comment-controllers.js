@@ -38,7 +38,7 @@ const getCommentThreadById = async (req, res) => {
     let commentThread;
     try {
         commentThread = await db.query(
-            'SELECT c_id, commentcontent, author, parentthread, childthread, username ' +
+            'SELECT c_id, commentcontent, author, parentthread, comment_date, childthread, username, profile_pic, u_id ' +
             'FROM comments JOIN users ON comments.parentthread = $1 AND comments.author = users.u_id',
             [tid]
         );
@@ -50,7 +50,7 @@ const getCommentThreadById = async (req, res) => {
         })
     }
     if (req.method === 'POST') {
-        res.json({ comments: commentThread.map(comment =>
+        res.json(commentThread.map(comment =>
             {
                 return (
                     {
@@ -65,10 +65,10 @@ const getCommentThreadById = async (req, res) => {
                     }
                 )
             }
-            )})
+            ))
     }
     else {
-        res.json({comments: commentThread.map(comment => comment)})
+        res.json(commentThread.map(comment => comment))
     }
 };
 
@@ -141,9 +141,9 @@ const createComment = async (req, res) => {
     } finally {
         client.release();
     }
-    res.status(201).json({
-        comment: { ...createdComment.rows[0], author: commentAuthor }
-    })
+    res.status(201).json(
+        { ...createdComment.rows[0], author: commentAuthor }
+    )
 };
 
 exports.getCommentThreadById = getCommentThreadById;

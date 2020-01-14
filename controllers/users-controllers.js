@@ -3,7 +3,8 @@ const bcrypt = require('bcryptjs');
 
 const db = require('../queries');
 const dbUsers = require('../db-utils/db-user');
-
+let jwt = require('jsonwebtoken');
+let config = require('../config');
 
 
 const getUserFriends = async (req, res) => {
@@ -33,10 +34,29 @@ const getUsers = async (req, res) => {
 
     let users;
     try {
-        users = await db.query('SELECT u_id, username, intraid, profile_pic FROM users');
+        users = await db.query(
+            'SELECT ' +
+            'u_id, ' +
+            'username, ' +
+            'intraid, ' +
+            'profile_pic, ' +
+            'coalitionpoints, ' +
+            'coalition_rank, ' +
+            'grade, ' +
+            'level, ' +
+            'class_of, ' +
+            'wallet, ' +
+            'location, ' +
+            'active, ' +
+            'correctionpoints' +
+            ' FROM users');
         users = users.rows;
     } catch (e) {
         return console.log('ERROR: ' + e);
+        return res.status(500).json({
+            status: 'error',
+            message: 'Failed to get users.'
+        })
     }
 
     res.json({users: users.map(user => user)});
@@ -53,8 +73,18 @@ const getUserById = async (req, res) => {
         user = await db.query('SELECT u_id, username, profile_pic, intraid FROM users WHERE u_id = $1', [userId]);
         user = user.rows[0];
     } catch (e) {
-        return console.log('ERROR: ' + e);
+        return res.status(500).json({
+            status: 'error',
+            message: 'Failed to get users by id.'
+        })
     }
+    if (!user) {
+        return res.status(404).json({
+            status: 'error',
+            message: 'Couldn\'t find user matching given id.'
+        })
+    }
+
     res.json({user: user});
 };
 
@@ -161,8 +191,17 @@ const login = async (req, res, next) => {
             message: 'Invalid credentials, please try again.'
         })
     }
-
-    res.json({ status: 'success', message: 'logged in!' })
+    let token = jwt.sign({username: username},
+        config.secret,
+        { expiresIn: '24h' // expires in 24 hours
+        }
+    );
+    // return the JWT token for the future API calls
+    res.json({
+        success: true,
+        message: 'Authentication successful!',
+        token: token
+    });
 };
 
 

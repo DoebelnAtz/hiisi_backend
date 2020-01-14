@@ -9,6 +9,7 @@ const client_secret1 = 'af3ab8010919e3f92a5e5cdc6da74752853ed37fd64758797f8eba86
 let token = '';
 
 const getToken = async () => {
+    console.log('old token: ' + token);
     let data = {
         client_id,
         client_secret,
@@ -27,7 +28,7 @@ const getToken = async () => {
 const intraApi = async (endpoint) => {
 
     let headers = {
-        Authorization: 'Bearer' + token,
+        Authorization: 'Bearer ' + token,
     };
     console.log('Making request to https://api.intra.42.fr/v2' + endpoint);
     let resp;
@@ -50,11 +51,11 @@ const intraApi = async (endpoint) => {
                     headers: headers
                 });
             } catch (e) {
-                console.log(e.response.status)
+                return console.log(e.response.status)
             }
         }
     }
-    console.log(resp);
+    return(resp.data)
 };
 
 module.exports = {
