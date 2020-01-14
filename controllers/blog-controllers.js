@@ -7,7 +7,8 @@ const db = require('../queries');
 const getBlogs = async (req, res) => {
 
     let sender;
-
+    // Using a POST request here is bad practice since it doesn't modify a resource, but you "can't" really include
+    // a body in a GET request.
     const { senderId } = req.body;
 
     try {
@@ -151,7 +152,40 @@ const createBlog = async (req, res) => {
     res.status(201).json(createdBlog.rows[0])
 };
 
+const likeBlog = async (req, res) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+        return res.status(401).json({
+            status: 'error',
+            message: 'Invalid input please try again.'
+        })
+    }
+
+    const { blogId, userId } = req.body;
+
+    const client = await db.connect();
+
+    try{
+        await client.query('BEGIN');
+        await client.query('UPDATE blogs SET likes = likes + 1 WHERE b_id = $1', [blogId]);
+        await client.query('INSERT INTO likedposts (user_id, blog_id) VALUES ($1, $2)', [userId, blogId]);
+        await client.query('COMMIT');
+    } catch (e) {
+        await client.query('ROLLBACK');
+        return res.status(500).json({
+            success: false,
+            status: 'error',
+            message: 'Failed to create blogpost, please try again later.'
+        })
+    } finally {
+        client.release();
+    }
+    res.json({success: true})
+};
+
+
 exports.getBlogs = getBlogs;
 exports.getBlogById = getBlogById;
 exports.getBlogsByUserId = getBlogsByUserId;
 exports.createBlog = createBlog;
+exports.likeBlog = likeBlog;

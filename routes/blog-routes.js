@@ -63,4 +63,9 @@ router.post(
     commentController.createComment
 );
 
+router.post(
+    '/like_post',
+    blogsController.likeBlog
+);
+
 module.exports = router;
