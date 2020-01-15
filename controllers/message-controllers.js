@@ -1,6 +1,6 @@
 const { validationResult } = require('express-validator');
 const db = require('../queries');
-const logger = require('../logger');
+const {accessLogger, errorLogger} = require('../logger');
 
 const getMessagesByThreadId = async (req, res) => {
     const threadId = req.params.tid;
@@ -12,7 +12,7 @@ const getMessagesByThreadId = async (req, res) => {
             'JOIN users on users.u_id = messages.sender;', [threadId]);
         messages = messages.rows;
     } catch (e) {
-        logger.info(`Failed to get messages: \n\n${e}`);
+        accessLogger.info(`Failed to get messages: \n\n${e}`);
         return res.status(500).json({
             status: 'error',
             message: 'Failed to get messages'

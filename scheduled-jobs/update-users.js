@@ -1,6 +1,6 @@
 const api = require('./api');
 const db = require('../queries');
-const logger = require('../logger');
+const {accessLogger, errorLogger} = require('../logger');
 const utils = require('../utils/utils');
 
 const updateUsers = async () => {
@@ -10,7 +10,7 @@ const updateUsers = async () => {
         users = await db.query('SELECT intraid, u_id FROM users');
         users = users.rows;
     } catch (e) {
-        logger.info('Scheduled userupdater failed to get users from database');
+        errorLogger.error('Scheduled userupdater failed to get users from database');
     }
 
     const client = await db.connect();
@@ -22,7 +22,7 @@ const updateUsers = async () => {
             await utils.sleep(1000);
             let coalitioninfo = await api.intraApi('/users/' + users[i].intraid + '/coalitions_users');
             await utils.sleep(1000);
-            logger.info(JSON.stringify(users[i]));
+            accessLogger.info(JSON.stringify(users[i]));
             await client.query('UPDATE users SET ' +
                 'profile_pic = $1, ' +
                 'level = $2,' +

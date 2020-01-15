@@ -1,6 +1,6 @@
 let jwt = require('jsonwebtoken');
 const config = require('./config.js');
-const logger = require('./logger');
+const accessLogger = require('./logger').accessLogger;
 
 let checkToken = (req, res, next) => {
     let token = req.headers['x-access-token'] || req.headers['authorization'];
@@ -23,12 +23,11 @@ let checkToken = (req, res, next) => {
                 });
             } else {
                 req.decoded = decoded;
-                console.log(decoded);
-                next();
+                 next();
             }
         });
     } else {
-        return res.json({
+        return res.status(401).json({
             success: false,
             message: 'Invalid token'
         });
@@ -37,10 +36,10 @@ let checkToken = (req, res, next) => {
 
 let logIncomingRequests = (req, res, next) => {
     if (req.method === "POST") {
-        logger.info(req.method + ": " + req.path + " Body: " + JSON.stringify(req.body));
+        accessLogger.info(req.method + ": " + req.path + " Body: " + JSON.stringify(req.body));
     }
     else if (req.method === "GET")
-        logger.info(req.method + ": " + req.path);
+        accessLogger.info(req.method + ": " + req.path);
     next();
 };
 
