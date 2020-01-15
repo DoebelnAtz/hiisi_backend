@@ -6,7 +6,6 @@ const config = require('./config.js');
 let middleware = require('./middleware');
 
 const schedule = require('node-schedule');
-
 const authRoutes = require('./routes/auth-routes');
 const userRoutes = require('./routes/user-routes');
 const blogRoutes = require('./routes/blog-routes');
@@ -19,8 +18,9 @@ var j = schedule.scheduleJob('*/10 * * * * ', userJobs.update); // execute job e
 app.use(cors());
 app.use(bodyParser.json());
 app.use('/api/auth', authRoutes);
-app.use('/api/messages', messageRoutes);
 app.use('/', middleware.checkToken);
+app.use('/', middleware.logRequests);
+app.use('/api/messages', messageRoutes);
 
 app.use('/api/users', userRoutes);
 app.use('/api/blogs', blogRoutes);

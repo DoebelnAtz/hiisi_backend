@@ -7,9 +7,7 @@ const db = require('../queries');
 const getBlogs = async (req, res) => {
 
     let sender;
-    // Using a POST request here is bad practice since it doesn't modify a resource, but you "can't" really include
-    // a body in a GET request.
-    const { senderId } = req.body;
+    const senderId = req.decoded.u_id; // get sender id
 
     try {
         sender = await db.query('SELECT blog_id FROM users join likedposts ON likedposts.user_id = $1', [senderId]);
@@ -172,10 +170,12 @@ const likeBlog = async (req, res) => {
         await client.query('COMMIT');
     } catch (e) {
         await client.query('ROLLBACK');
-        return res.status(500).json({
+        return res.status(200).json({
+            //since there is a possibility it fails because user
+            // already liked a post we send back an ok response anyway prob bad practice, improve later..
             success: false,
             status: 'error',
-            message: 'Failed to create blogpost, please try again later.'
+            message: 'Failed to like blog post.'
         })
     } finally {
         client.release();

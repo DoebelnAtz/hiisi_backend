@@ -17,6 +17,11 @@ router.get(
 );
 
 router.get(
+    '/me',
+    usersController.getMe
+);
+
+router.get(
     '/api',
     () => api.intraApi('/users/61979')
 );

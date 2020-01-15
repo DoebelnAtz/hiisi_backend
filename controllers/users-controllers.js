@@ -6,6 +6,44 @@ const dbUsers = require('../db-utils/db-user');
 let jwt = require('jsonwebtoken');
 let config = require('../config');
 
+const getMe = async (req, res) => {
+    // More secure version of getUserById, it gets the uid from token supplied id
+    const userId = req.decoded.u_id;
+
+    let user;
+    try {
+        user = await db.query(
+            'SELECT ' +
+            'u_id, ' +
+            'username, ' +
+            'intraid, ' +
+            'profile_pic, ' +
+            'coalitionpoints, ' +
+            'coalition_rank, ' +
+            'grade, ' +
+            'level, ' +
+            'class_of, ' +
+            'wallet, ' +
+            'location, ' +
+            'active, ' +
+            'correctionpoints ' +
+            'FROM users WHERE u_id = $1', [userId]);
+        user = user.rows[0];
+    } catch (e) {
+        return res.status(500).json({
+            status: 'error',
+            message: 'Failed to get users by id.'
+        })
+    }
+    if (!user) {
+        return res.status(404).json({
+            status: 'error',
+            message: 'Couldn\'t find user matching given id.'
+        })
+    }
+
+    res.json(user);
+}
 
 const getUserFriends = async (req, res) => {
 
@@ -38,7 +76,6 @@ const getUsers = async (req, res) => {
             'SELECT ' +
             'u_id, ' +
             'username, ' +
-            'intraid, ' +
             'profile_pic, ' +
             'coalitionpoints, ' +
             'coalition_rank, ' +
@@ -207,7 +244,7 @@ const login = async (req, res, next) => {
             message: 'Invalid credentials, please try again.'
         })
     }
-    let token = jwt.sign({username: username},
+    let token = jwt.sign({username: username, u_id: existingUser.u_id},
         config.secret,
         { expiresIn: '24h' // expires in 24 hours
         }
@@ -249,6 +286,7 @@ const searchUsers = async (req, res, next) => {
     res.json(usersFound.map(user => user))
 };
 
+exports.getMe = getMe;
 exports.getUserFriends = getUserFriends;
 exports.getUsers = getUsers;
 exports.getUserById = getUserById;

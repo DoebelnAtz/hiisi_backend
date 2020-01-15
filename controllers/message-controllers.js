@@ -22,7 +22,7 @@ const getMessagesByThreadId = async (req, res) => {
 };
 
 const getThreadsByUserId = async (req, res) => {
-    const userId = req.params.uid;
+    const userId = req.decoded.u_id; // always more secure to get u_id from decoded token!!
 
     let threads;
     try {

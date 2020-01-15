@@ -1,5 +1,6 @@
 let jwt = require('jsonwebtoken');
 const config = require('./config.js');
+const logger = require('./logger');
 
 let checkToken = (req, res, next) => {
     let token = req.headers['x-access-token'] || req.headers['authorization'];
@@ -22,6 +23,7 @@ let checkToken = (req, res, next) => {
                 });
             } else {
                 req.decoded = decoded;
+                console.log(decoded);
                 next();
             }
         });
@@ -33,6 +35,17 @@ let checkToken = (req, res, next) => {
     }
 };
 
+let logIncomingRequests = (req, res, next) => {
+    if (req.method === "POST") {
+        logger.info(req.method + ": " + req.path + " Body: " + JSON.stringify(req.body));
+    }
+    else if (req.method === "GET")
+        logger.info(req.method + ": " + req.path);
+    next();
+};
+
+
 module.exports = {
-    checkToken: checkToken
+    checkToken: checkToken,
+    logRequests: logIncomingRequests
 };

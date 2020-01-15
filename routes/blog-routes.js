@@ -7,7 +7,7 @@ const router = express.Router();
 
 // We can get posts by POST or GET, POST method can include senderId to check if sender has liked a post
 
-router.post(
+router.get(
     '/',
     blogsController.getBlogs
 );
