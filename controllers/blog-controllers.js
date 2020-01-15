@@ -143,7 +143,7 @@ const createBlog = async (req, res) => {
         console.log(e);
         return res.status(500).json({
             status: 'error',
-            message: 'Failed to create blogpost, please try again later.'
+            message: 'Failed to create Blog Post, please try again later.'
         })
     } finally {
         client.release();
