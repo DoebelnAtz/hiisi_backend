@@ -23,7 +23,8 @@ let checkToken = (req, res, next) => {
                 });
             } else {
                 req.decoded = decoded;
-                 next();
+
+                next();
             }
         });
     } else {
@@ -34,7 +35,7 @@ let checkToken = (req, res, next) => {
     }
 };
 
-let logIncomingRequests = (req, res, next) => {
+const logIncomingRequests = (req, res, next) => {
     if (req.method === "POST") {
         accessLogger.info(req.method + ": " + req.path + " Body: " + JSON.stringify(req.body));
     }
@@ -43,8 +44,32 @@ let logIncomingRequests = (req, res, next) => {
     next();
 };
 
+const checkSocketToken = (socket, next) => {
+    let token = socket.handshake.headers['authorization'];
+    if (!token) {
+        return next(new Error('authentication error'));
+    }
+    if (token.startsWith('Bearer ')) {
+        token = token.slice(7, token.length);
+    }
+
+    if (token) {
+        jwt.verify(token, config.secret, (err, decoded) => {
+            if (err) {
+                return next(new Error('authentication error'));
+            } else {
+                socket.body = {decoded: decoded};
+                next();
+            }
+        });
+    } else {
+        return next(new Error('authentication error'));
+    }
+};
+
 
 module.exports = {
     checkToken: checkToken,
-    logRequests: logIncomingRequests
+    logRequests: logIncomingRequests,
+    checkSocketToken: checkSocketToken
 };

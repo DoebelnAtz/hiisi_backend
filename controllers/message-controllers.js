@@ -12,12 +12,28 @@ const getMessagesByThreadId = async (req, res) => {
             'JOIN users on users.u_id = messages.sender;', [threadId]);
         messages = messages.rows;
     } catch (e) {
-        accessLogger.info(`Failed to get messages: \n\n${e}`);
+        errorLogger.error(`Failed to get messages: \n\n${e}`);
         return res.status(500).json({
             status: 'error',
             message: 'Failed to get messages'
         })
     }
+    try {
+        let isAllowed = await db.query('SELECT * from threadconnections where user_id = $1 AND thread_id = $2', [req.decoded.u_id, threadId]);
+        if (!isAllowed.rows.length) {
+            res.status(401).json({
+                status: 'error',
+                message: 'unauthorized'
+            })
+        }
+    } catch (e) {
+        errorLogger.error(`Failed to get messages: \n\n${e}`);
+        return res.status(500).json({
+            status: 'error',
+            message: 'Failed to get messages'
+        })
+    }
+
     res.json(messages)
 };
 
