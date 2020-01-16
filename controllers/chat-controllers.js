@@ -2,6 +2,8 @@ const { validationResult } = require('express-validator');
 const db = require('../queries');
 const {accessLogger, errorLogger} = require('../logger');
 
+// socket controllers in this file
+
 const saveMessageToDB = async(socket, message, io) => {
 
     const senderId = socket.body.decoded.u_id;
@@ -24,7 +26,7 @@ const saveMessageToDB = async(socket, message, io) => {
         createdMessage = await db.query('INSERT INTO messages (message, sender, thread) VALUES ($1, $2, $3) RETURNING m_id, time_sent, message, sender',
             [incomingMessage.message, senderId, threadId]);
         createdMessage = createdMessage.rows[0];
-        console.log(createdMessage)
+        console.log(createdMessage);
         createdMessage.username = socket.body.decoded.username;
     } catch (e) {
         errorLogger.error('FAILED TO SAVE MESSAGE: ' + e);

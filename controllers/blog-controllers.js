@@ -2,12 +2,10 @@ const { validationResult } = require('express-validator');
 
 const db = require('../queries');
 
-
-
 const getBlogs = async (req, res) => {
 
     let sender;
-    const senderId = req.decoded.u_id; // get sender id
+    const senderId = req.decoded.u_id; // get sender id from decoded token
 
     try {
         sender = await db.query('SELECT blog_id FROM users join likedposts ON likedposts.user_id = $1', [senderId]);
@@ -35,7 +33,6 @@ const getBlogs = async (req, res) => {
     }
 
     res.json(
-
             blogs.map(blog => {
                 return (
                     {

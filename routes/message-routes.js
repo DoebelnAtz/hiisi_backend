@@ -11,13 +11,24 @@ router.get(
 );
 
 router.get(
-    '/users/:uid',
+    '/threads',
     messageController.getThreadsByUserId
 );
 
-// router.post(
-//     '/threads/:tid',
-//     chatController.saveMessageToDB
-// );
+router.post(
+    '/threads/create_thread',
+    messageController.createNewThread
+);
+
+router.post(
+    '/threads/add_user',
+    messageController.addUserToThread
+);
+
+router.get(
+    '/threads/:tid/users',
+    messageController.getUsersInThread
+);
+
 
 module.exports = router;

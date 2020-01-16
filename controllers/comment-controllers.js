@@ -1,5 +1,5 @@
 const { validationResult } = require('express-validator');
-
+const { errorLogger, accessLogger} = require('../logger');
 const db = require('../queries');
 
 
@@ -9,67 +9,63 @@ const getCommentThreadById = async (req, res) => {
 
     let sender;
 
-    if (req.method === "POST") {
-        const { senderId } = req.body;
 
-        try { // could be optimized by returning necessary comment data through comments JOIN voted..., keep as is for now..
-            sender = await db.query(
-                'SELECT comment_id, vote ' +
-                'FROM users join votedcomments ON votedcomments.user_id = users.u_id AND users.u_id = $1',
-                [senderId]
-            );
-            sender = sender.rows.map(row => {
-                return (
-                    {
-                        c_id: row.comment_id,
-                        vote: row.vote
-                    }
-                    )
-            }
-            );
-        } catch (e) {
-            return res.status(500).json({
-                status: 'error',
-                message: 'Failed to get blogs'
-            })
+    const { senderId } = req.decoded.u_id;
+
+    try { // could be optimized by returning necessary comment data through comments JOIN voted..., keep as is for now..
+        sender = await db.query(
+            'SELECT comment_id, vote ' +
+            'FROM users join votedcomments ON votedcomments.user_id = users.u_id AND users.u_id = $1',
+            [senderId]
+        );
+        sender = sender.rows.map(row => {
+            return (
+                {
+                    c_id: row.comment_id,
+                    vote: row.vote
+                }
+                )
         }
+        );
+    } catch (e) {
+        errorLogger.error('Failed to retrieve blogs: ' + e);
+        return res.status(500).json({
+            status: 'error',
+            message: 'Failed to get blogs'
+        })
     }
 
     let commentThread;
     try {
         commentThread = await db.query(
-            'SELECT c_id, commentcontent, author, parentthread, comment_date, childthread, username, profile_pic, u_id ' +
+            'SELECT comments.c_id, commentcontent, author, parentthread, comment_date, childthread, username, profile_pic, u_id ' +
             'FROM comments JOIN users ON comments.parentthread = $1 AND comments.author = users.u_id',
             [tid]
         );
         commentThread = commentThread.rows;
     } catch (e) {
+        errorLogger.error('Failed to retrieve comments: ' + e);
         return res.status(500).json({
             status: 'error',
             message: 'Failed to retrieve comments.'
         })
     }
-    if (req.method === 'POST') {
-        res.json(commentThread.map(comment =>
-            {
-                return (
+    res.json(commentThread.map(comment =>
+        {
+            return (
+                {
+                    ...comment,
+                    vote: sender.find(v =>
                     {
-                        ...comment,
-                        vote: sender.find(v =>
-                        {
-                            return (v.c_id === comment.c_id)
-                        })
-                            ? sender.find(v => v.c_id === comment.c_id).vote : "no"
-                        // sends true if up voted, false if down voted,
-                        // 'no' if not voted.. not perfect, table value is boolean, worth changing?
-                    }
-                )
-            }
-            ))
-    }
-    else {
-        res.json(commentThread.map(comment => comment))
-    }
+                        return (v.c_id === comment.c_id)
+                    })
+                        ? sender.find(v => v.c_id === comment.c_id).vote : "no"
+                    // sends true if up voted, false if down voted,
+                    // 'no' if not voted.. not perfect, table value is boolean, worth changing?
+                }
+            )
+        }
+        ))
 };
 
 

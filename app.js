@@ -2,13 +2,11 @@ const express = require('express');
 const bodyParser = require('body-parser');
 const cors = require('cors');
 let middleware = require('./middleware');
-let jwt = require('jsonwebtoken');
-const config = require('./config.js');
 const app = express();
 const server = app.listen(5000);
 const io = require('socket.io')(5010, {
     handlePreflightRequest: function (req, res) {
-        var headers = {
+        var headers = { // socket cors headers
             'Access-Control-Allow-Headers': 'Content-Type, Authorization',
             'Access-Control-Allow-Origin': 'http://localhost:3000',
             'Access-Control-Allow-Credentials': true
@@ -18,7 +16,7 @@ const io = require('socket.io')(5010, {
     }
 });
 
-io.origins('*:*');
+io.origins('*:*'); // allow all request origins for sockets
 
 const schedule = require('node-schedule');
 const authRoutes = require('./routes/auth-routes');
@@ -33,18 +31,17 @@ var j = schedule.scheduleJob('*/10 * * * * ', userJobs.update); // execute job e
 
 app.use(cors());
 app.use(bodyParser.json());
-app.use('/api/auth', authRoutes);
+app.use('/', middleware.logRequests); // log every incoming access request
+app.use('/api/auth', authRoutes); // auth routes before check token, because login requests do not supply a Token.
 app.use('/api', middleware.checkToken);
-app.use('/', middleware.logRequests);
-io.use((socket, next) => middleware.checkSocketToken(socket, next)); //  make sure token is correct;
+io.use((socket, next) => middleware.checkSocketToken(socket, next)); // make sure socket requests token is correct;
 app.use('/api/messages', messageRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/blogs', blogRoutes);
-var id = 555;
 
 io.on('connection', socket => {
     console.log("connected!");
-    socket.join(socket.request.headers.referer, () => {
+    socket.join(socket.request.headers.referer, () => { // when connecting to socket, join the appropriate room
         console.log('Joined room: ' + socket.request.headers.referer)
     });
     socket.join(socket.id, () => {
@@ -61,6 +58,3 @@ io.on('connection', socket => {
         console.log('Disconnected from room: ' + socket.request.headers.referer)
     })
 });
-
-
-

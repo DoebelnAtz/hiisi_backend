@@ -9,7 +9,6 @@ let config = require('../config');
 const getMe = async (req, res) => {
     // More secure version of getUserById, it gets the uid from token supplied id
     const userId = req.decoded.u_id;
-
     let user;
     try {
         user = await db.query(
@@ -43,7 +42,7 @@ const getMe = async (req, res) => {
     }
 
     res.json(user);
-}
+};
 
 const getUserFriends = async (req, res) => {
 

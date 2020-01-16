@@ -7,12 +7,14 @@ const pool = new pg.Pool ({
     database: 'hiveapi',
     password: '94502491Hive',
 });
+
 const client = new pg.Client ({
     user: 'admin',
     host: '134.209.227.11',
     database: 'hiveapi',
     password: '94502491Hive',
 });
+
 client.connect(function(err) {
     if(err) {
         return console.error('could not connect to postgres', err);
