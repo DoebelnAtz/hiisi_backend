@@ -15,10 +15,9 @@ const io = require('socket.io')(5010, {
         res.end();
     }
 });
-
 io.origins('*:*'); // allow all request origins for sockets
-
 const schedule = require('node-schedule');
+
 const authRoutes = require('./routes/auth-routes');
 const userRoutes = require('./routes/user-routes');
 const blogRoutes = require('./routes/blog-routes');
@@ -27,7 +26,7 @@ const messageRoutes = require('./routes/message-routes');
 
 const chatController = require('./controllers/chat-controllers');
 
-var j = schedule.scheduleJob('*/10 * * * * ', userJobs.update); // execute job every X minutes, cron-like syntax
+schedule.scheduleJob('*/10 * * * * ', userJobs.update); // execute job every X minutes, cron-like syntax
 
 app.use(cors());
 app.use(bodyParser.json());
@@ -41,20 +40,29 @@ app.use('/api/blogs', blogRoutes);
 
 io.on('connection', socket => {
     console.log("connected!");
+
     socket.join(socket.request.headers.referer, () => { // when connecting to socket, join the appropriate room
-        console.log('Joined room: ' + socket.request.headers.referer)
+        console.log('Joined room: ' + socket.request.headers.referer);
+
+        io.to(socket.request.headers.referer).emit('joined-room', socket.body.decoded)
     });
+    var clients_in_the_room = io.sockets.adapter.rooms[socket.request.headers.referer];
+    console.log(clients_in_the_room)
+    for (var clientId in clients_in_the_room.sockets ) {
+        console.log('client: %s', clientId); //Seeing is believing
+
+    }
     socket.join(socket.id, () => {
         console.log('Joined room: ' + socket.id)
     });
 
     socket.on('send-message', (message) => {
-        console.log(socket.body);
-        console.log('hit');
-        console.log(message);
         chatController.saveMessageToDB(socket, message, io);
     });
+
     socket.on('disconnect', () => {
         console.log('Disconnected from room: ' + socket.request.headers.referer)
+        io.to(socket.request.headers.referer).emit('left-room', socket.body.decoded)
+
     })
 });

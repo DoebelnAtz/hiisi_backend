@@ -12,6 +12,8 @@ const { validationResult } = require('express-validator');
 //     return (count);
 // };
 
+
+
 const countAchievementPoints = (achievementList) => {
     let points = 0;
     for (var i = 0; i < achievementList.length; i++) {
