@@ -22,6 +22,7 @@ const authRoutes = require('./routes/auth-routes');
 const userRoutes = require('./routes/user-routes');
 const blogRoutes = require('./routes/blog-routes');
 const userJobs = require('./scheduled-jobs/update-users');
+const projectRotes = require('./routes/project-routes');
 const messageRoutes = require('./routes/message-routes');
 
 const chatController = require('./controllers/chat-controllers');
@@ -36,6 +37,7 @@ app.use('/api', middleware.checkToken);
 io.use((socket, next) => middleware.checkSocketToken(socket, next)); // make sure socket requests token is correct;
 app.use('/api/messages', messageRoutes);
 app.use('/api/users', userRoutes);
+app.use('/api/projects', projectRotes);
 app.use('/api/blogs', blogRoutes);
 
 io.on('connection', socket => {
