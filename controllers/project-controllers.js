@@ -64,7 +64,7 @@ const getBoardById = async (req, res) => {
         errorLogger.error('Failed to get board by id: ' + e);
         return res.status(500).json({
             status: 'error',
-            message: 'Failed to get board by id'
+            message: 'Failed to get board by Id'
         })
     }
     console.log(resp);
