@@ -30,11 +30,6 @@ router.get(
 );
 
 router.post(
-    '/commentthread/:tid',
-    commentController.getCommentThreadById
-);
-
-router.post(
     '/create_blog',
     [
         check('title')
@@ -65,6 +60,14 @@ router.post(
 
 router.post(
     '/like_post',
+    [
+        check('blogId')
+            .not()
+            .isEmpty(),
+        check('userId')
+            .not()
+            .isEmpty(),
+    ],
     blogsController.likeBlog
 );
 

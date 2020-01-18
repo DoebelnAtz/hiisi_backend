@@ -2,6 +2,41 @@ const { validationResult } = require('express-validator');
 const { errorLogger, accessLogger} = require('../logger');
 const db = require('../queries');
 
+const addTaskToBoard = async (req, res) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+        return res.status(401).json({
+            status: 'error',
+            message: 'Invalid input please try again.'
+        })
+    }
+    const userId = req.decoded.u_id;
+
+    const { taskTitle, taskColumnId } = req.body;
+
+    const client = await db.connect();
+    let createdTask;
+    try{
+        await client.query('BEGIN');
+        createdTask = await client.query('INSERT INTO tasks (title, column_id) VALUES ($1, $2)' +
+            'RETURNING title as task_title, column_id, task_id',
+            [taskTitle, taskColumnId]);
+        createdTask = createdTask.rows[0];
+        await client.query('COMMIT');
+    } catch (e) {
+        await client.query('ROLLBACK');
+        errorLogger.error('Failed to add task: ' + e);
+        return res.status(500).json({
+            success: false,
+            status: 'error',
+            message: 'Failed to add task.'
+        })
+    } finally {
+        client.release();
+    }
+    res.status(201).json(createdTask);
+};
+
 const getBoardById = async (req, res) => {
     const boardId = req.params.bid;
 
@@ -36,4 +71,39 @@ const getBoardById = async (req, res) => {
     res.json(resp);
 };
 
+const saveBoardState = async (req, res) => {
+    const { boardState } = req.body;
+
+    const client = await db.connect();
+
+    try{
+        await client.query('BEGIN');
+        boardState.map(async (column) => {
+            column.taskList.map(async (task) => {
+                if (task > 0) {
+                    await client.query(
+                        'UPDATE tasks SET column_id = $1 WHERE task_id = $2',
+                        [column.column_id, task])
+                }
+            }
+        )
+        });
+        await client.query('COMMIT');
+    } catch (e) {
+        await client.query('ROLLBACK');
+        errorLogger.error('Failed to add task: ' + e);
+        return res.status(500).json({
+            success: false,
+            status: 'error',
+            message: 'Failed to save board.'
+        })
+    } finally {
+        client.release();
+    }
+    res.json({success: true})
+};
+
+
+exports.addTaskToBoard = addTaskToBoard;
 exports.getBoardById = getBoardById;
+exports.saveBoardState = saveBoardState;
