@@ -71,6 +71,41 @@ const getBoardById = async (req, res) => {
     res.json(resp);
 };
 
+const getProjects = async (req, res) => {
+
+    let projects;
+    try {
+        projects = await db.query(
+            'SELECT p.title, p.created_date, p.votes, p.project_id FROM projects p'
+        );
+        projects = projects.rows;
+    } catch (e) {
+        errorLogger.error('Failed to get projects: ' + e);
+        return res.status(500).json({
+            status: 'error',
+            message: 'Failed to get projects'
+        })
+    }
+
+    for (var i = 0; i < projects.length; i++) {
+        try {
+                let resp = await db.query(
+                'SELECT u.profile_pic, u.u_id, u.username ' +
+                'FROM projects p JOIN projectcollaborators c ON c.project_id = p.project_id ' +
+                'JOIN users u ON c.u_id = u.u_id WHERE p.project_id = $1',
+                [projects[i].project_id]);
+            projects[i].collaborators = resp.rows;
+        } catch (e) {
+            errorLogger.error('Failed to get projects: ' + e);
+            return res.status(500).json({
+                status: 'error',
+                message: 'Failed to get projects'
+            })
+        }
+    }
+    res.json(projects);
+};
+
 const saveBoardState = async (req, res) => {
     const { boardState } = req.body;
 
@@ -106,4 +141,5 @@ const saveBoardState = async (req, res) => {
 
 exports.addTaskToBoard = addTaskToBoard;
 exports.getBoardById = getBoardById;
+exports.getProjects = getProjects;
 exports.saveBoardState = saveBoardState;

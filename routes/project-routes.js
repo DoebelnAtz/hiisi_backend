@@ -26,4 +26,9 @@ router.post(
     projectControllers.saveBoardState
 );
 
+router.get(
+    '/',
+    projectControllers.getProjects
+);
+
 module.exports = router;
