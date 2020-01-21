@@ -89,7 +89,7 @@ const createBlog = async (req, res) => {
 
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
-        return res.status(401).json({
+        return res.status(400).json({
             status: 'error',
             message: 'Invalid input please try again.'
         })
@@ -150,13 +150,13 @@ const createBlog = async (req, res) => {
 const likeBlog = async (req, res) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
-        return res.status(401).json({
+        return res.status(400).json({
             status: 'error',
             message: 'Invalid input please try again.'
         })
     }
-
-    const { blogId, userId } = req.body;
+    const userId = req.decoded.u_id;
+    const { blogId } = req.body;
 
     const client = await db.connect();
 

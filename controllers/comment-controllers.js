@@ -73,14 +73,14 @@ const getCommentThreadById = async (req, res) => {
 const createComment = async (req, res) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
-        return res.status(401).json({
+        return res.status(400).json({
             status: 'error',
             message: 'Invalid inputs passed, please check your data.'
         })
     }
-
-    const { threadId, content, authorId } = req.body;
-
+    const authorId = req.decoded.u_id;
+    const { threadId, content } = req.body;
+    console.log(threadId, content, authorId);
     let thread;
     try {
         thread = await db.query('SELECT * FROM commentthreads WHERE t_id = $1', [threadId])
@@ -98,7 +98,9 @@ const createComment = async (req, res) => {
 
     let commentAuthor;
     try {
-        commentAuthor = await db.query('SELECT username, intraid FROM users WHERE u_id = $1', [authorId]);
+        commentAuthor = await db.query(
+            'SELECT username, intraid, profile_pic FROM users WHERE u_id = $1',
+            [authorId]);
         if (!(commentAuthor = commentAuthor.rows[0]))
             return res.status(401).json({
                 status: 'error',
@@ -118,7 +120,9 @@ const createComment = async (req, res) => {
         let res = await client.query('INSERT INTO commentthreads DEFAULT VALUES RETURNING t_id');
         res = res.rows[0];
         createdComment = await client.query(
-            'INSERT INTO comments(commentcontent, author, parentthread, childthread) VALUES($1, $2, $3, $4) RETURNING c_id, commentcontent, author, parentthread, childthread',
+            'INSERT INTO comments(commentcontent, author, parentthread, childthread) ' +
+            'VALUES($1, $2, $3, $4) ' +
+            'RETURNING c_id, commentcontent, author, parentthread, childthread, comment_date',
             [
                 content,
                 authorId,
@@ -129,16 +133,16 @@ const createComment = async (req, res) => {
         await client.query('COMMIT');
     } catch (e) {
         await client.query('ROLLBACK');
-        console.log(e);
+        errorLogger.error('Failed to create comment: ' + e);
         return res.status(500).json({
             status: 'error',
-            message: 'Failed to create comment, please try again later.'
+            message: 'Failed to create comment'
         })
     } finally {
         client.release();
     }
     res.status(201).json(
-        { ...createdComment.rows[0], author: commentAuthor }
+        { ...createdComment.rows[0], ...commentAuthor }
     )
 };
 

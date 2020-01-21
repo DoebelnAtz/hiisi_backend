@@ -45,9 +45,6 @@ router.post(
 router.post(
     '/create_comment',
     [
-        check('authorId')
-            .not()
-            .isEmpty(),
         check('threadId')
             .not()
             .isEmpty(),
@@ -62,9 +59,6 @@ router.post(
     '/like_post',
     [
         check('blogId')
-            .not()
-            .isEmpty(),
-        check('userId')
             .not()
             .isEmpty(),
     ],
