@@ -30,7 +30,7 @@ const saveMessageToDB = async(socket, message, io) => {
         createdMessage.username = socket.body.decoded.username;
     } catch (e) {
         errorLogger.error('FAILED TO SAVE MESSAGE: ' + e);
-        return io.to(socket.id).emit('chat-message', {message: "failed to send message :(", m_id: new Date().toISOString(), username: 'marvin', time_sent: new Date(0).toISOString()})
+        return io.to(socket.id).emit('chat-message', {message: "failed to send message: ", m_id: new Date().toISOString(), username: 'marvin', time_sent: new Date(0).toISOString()})
     }
     io.to(socket.request.headers.referer).emit('chat-message', createdMessage);
 

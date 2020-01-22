@@ -9,7 +9,6 @@ const getCommentThreadById = async (req, res) => {
 
     let sender;
 
-
     const { senderId } = req.decoded.u_id;
 
     try { // could be optimized by returning necessary comment data through comments JOIN voted..., keep as is for now..

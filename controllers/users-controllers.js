@@ -17,7 +17,7 @@ const getMe = async (req, res) => {
             'username, ' +
             'intraid, ' +
             'profile_pic, ' +
-            'coalitionpoints, ' +
+            'coalition_points, ' +
             'coalition_rank, ' +
             'grade, ' +
             'level, ' +
@@ -25,7 +25,7 @@ const getMe = async (req, res) => {
             'wallet, ' +
             'location, ' +
             'active, ' +
-            'correctionpoints ' +
+            'correction_points ' +
             'FROM users WHERE u_id = $1', [userId]);
         user = user.rows[0];
     } catch (e) {

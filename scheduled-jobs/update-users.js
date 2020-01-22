@@ -30,11 +30,11 @@ const updateUsers = async () => {
                 'class_of = $4,' +
                 'wallet = $5,' +
                 'location = $6,' +
-                'correctionpoints = $7,' +
-                'achievementpoints = $8,' +
+                'correction_points = $7,' +
+                'achievement_points = $8,' +
                 'active = $9, ' +
                 'coalition_rank = $10, ' +
-                'coalitionpoints = $11 ' +
+                'coalition_points = $11 ' +
                 ' WHERE u_id = $12',
                 [
                     userinfo.image_url,
@@ -54,11 +54,7 @@ const updateUsers = async () => {
         await client.query('COMMIT');
     } catch (e) {
         await client.query('ROLLBACK');
-        console.log(e);
-        return res.status(500).json({
-            status: 'error',
-            message: 'Failed to create comment, please try again later.'
-        })
+        errorLogger.error('Failed to update users: ' + e);
     } finally {
         client.release();
     }

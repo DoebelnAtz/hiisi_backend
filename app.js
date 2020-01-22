@@ -32,8 +32,8 @@ schedule.scheduleJob('*/10 * * * * ', userJobs.update); // execute job every X m
 app.use(cors());
 app.use(bodyParser.json());
 app.use('/api/auth', authRoutes); // auth routes before check token, because login requests do not supply a Token.
-app.use('/', middleware.logRequests); // log every incoming access request except auth routes, we don't want to log incoming passwords,
 app.use('/api', middleware.checkToken);
+app.use('/', middleware.logRequests); // log every incoming access request except auth routes, we don't want to log incoming passwords,
 io.use((socket, next) => middleware.checkSocketToken(socket, next)); // make sure socket requests token is correct;
 app.use('/api/messages', messageRoutes);
 app.use('/api/users', userRoutes);
