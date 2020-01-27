@@ -106,6 +106,44 @@ const getProjects = async (req, res) => {
     res.json(projects);
 };
 
+const getProjectById = async (req, res) => {
+    const projectId = req.params.pid;
+
+    let project;
+    try {
+        project = await db.query(
+            'SELECT p.title, b.board_id, p.project_id, p.votes, p.t_id ' +
+            'FROM projects p JOIN boards b ' +
+            'ON b.project_id = p.project_id AND p.project_id = $1',
+            [projectId]);
+        project = project.rows[0];
+    } catch (e) {
+        errorLogger.error('Failed to get project by id: ' + e);
+        return res.status(500).json({
+            status: 'error',
+            message: 'Failed to get project by id'
+        })
+    }
+
+    let collaborators;
+
+    try {
+        collaborators = await db.query(
+            'SELECT u.username, u.u_id, u.profile_pic FROM users u ' +
+            'JOIN projectcollaborators c ON c.u_id = u.u_id AND c.project_id = $1',
+            [projectId]);
+        collaborators = collaborators.rows;
+    } catch (e) {
+        errorLogger.error('Failed to get project by id: ' + e);
+        return res.status(500).json({
+            status: 'error',
+            message: 'Failed to get project by id'
+        })
+    }
+
+    res.json({...project, collaborators})
+};
+
 const saveBoardState = async (req, res) => {
     const { boardState } = req.body;
 
@@ -142,4 +180,5 @@ const saveBoardState = async (req, res) => {
 exports.addTaskToBoard = addTaskToBoard;
 exports.getBoardById = getBoardById;
 exports.getProjects = getProjects;
+exports.getProjectById = getProjectById;
 exports.saveBoardState = saveBoardState;

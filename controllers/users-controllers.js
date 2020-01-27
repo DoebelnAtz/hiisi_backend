@@ -2,6 +2,7 @@ const { validationResult } = require('express-validator');
 const bcrypt = require('bcryptjs');
 
 const db = require('../queries');
+const { errorLogger, accessLogger } = require('../logger');
 const dbUsers = require('../db-utils/db-user');
 let jwt = require('jsonwebtoken');
 let config = require('../config');
@@ -112,7 +113,7 @@ const getUserById = async (req, res) => {
             'username, ' +
             'intraid, ' +
             'profile_pic, ' +
-            'coalitionpoints, ' +
+            'coalition_points, ' +
             'coalition_rank, ' +
             'grade, ' +
             'level, ' +
@@ -120,10 +121,11 @@ const getUserById = async (req, res) => {
             'wallet, ' +
             'location, ' +
             'active, ' +
-            'correctionpoints ' +
+            'correction_points ' +
             'FROM users WHERE u_id = $1', [userId]);
         user = user.rows[0];
     } catch (e) {
+        errorLogger.error('Failed to get users by id: ' + e);
         return res.status(500).json({
             status: 'error',
             message: 'Failed to get users by id.'

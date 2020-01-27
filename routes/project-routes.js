@@ -27,6 +27,11 @@ router.post(
 );
 
 router.get(
+    '/:pid',
+    projectControllers.getProjectById
+);
+
+router.get(
     '/',
     projectControllers.getProjects
 );
