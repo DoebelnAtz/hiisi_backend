@@ -99,7 +99,7 @@ const getProjects = async (req, res) => {
             errorLogger.error('Failed to get projects: ' + e);
             return res.status(500).json({
                 status: 'error',
-                message: 'Failed to get projects'
+                message: 'Failed to get projects.'
             })
         }
     }
