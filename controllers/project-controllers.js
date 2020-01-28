@@ -108,11 +108,13 @@ const getProjects = async (req, res) => {
 
 const getProjectById = async (req, res) => {
     const projectId = req.params.pid;
+    const userId = req.decoded.u_id;
 
+    let contributor = false;
     let project;
     try {
         project = await db.query(
-            'SELECT p.title, b.board_id, p.project_id, p.votes, p.t_id ' +
+            'SELECT p.title, p.commentthread, b.board_id, p.project_id, p.votes, p.t_id ' +
             'FROM projects p JOIN boards b ' +
             'ON b.project_id = p.project_id AND p.project_id = $1',
             [projectId]);
@@ -133,6 +135,10 @@ const getProjectById = async (req, res) => {
             'JOIN projectcollaborators c ON c.u_id = u.u_id AND c.project_id = $1',
             [projectId]);
         collaborators = collaborators.rows;
+        for (var i = 0; i < collaborators.length; i++) {
+            if (collaborators[i].u_id === userId)
+                contributor = true;
+        }
     } catch (e) {
         errorLogger.error('Failed to get project by id: ' + e);
         return res.status(500).json({
@@ -141,7 +147,7 @@ const getProjectById = async (req, res) => {
         })
     }
 
-    res.json({...project, collaborators})
+    res.json({...project, contributor, collaborators})
 };
 
 const saveBoardState = async (req, res) => {
