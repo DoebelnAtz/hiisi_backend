@@ -36,4 +36,9 @@ router.get(
     projectControllers.getProjects
 );
 
+router.put(
+    '/boards/update_task',
+    projectControllers.updateTask
+);
+
 module.exports = router;

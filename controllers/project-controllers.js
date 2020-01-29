@@ -19,7 +19,7 @@ const addTaskToBoard = async (req, res) => {
     try{
         await client.query('BEGIN');
         createdTask = await client.query('INSERT INTO tasks (title, column_id) VALUES ($1, $2)' +
-            'RETURNING title as task_title, column_id, task_id',
+            'RETURNING title, column_id, task_id',
             [taskTitle, taskColumnId]);
         createdTask = createdTask.rows[0];
         await client.query('COMMIT');
@@ -56,9 +56,9 @@ const getBoardById = async (req, res) => {
     try {
         resp = {boardId: board[0].board_id, columns: []};
         for (var i = 0; i < board.length; i++) {
-            let col = await db.query('SELECT t.task_id, t.title AS task_title, c.column_id FROM tasks t ' +
+            let col = await db.query('SELECT t.priority, t.description, t.task_id, t.title, c.column_id FROM tasks t ' +
                 'JOIN boardcolumns c ON t.column_id = c.column_id AND c.column_id = $1', [board[i].column_id]);
-            resp.columns[i] = {column_id: board[i].column_id, title: board[i].column_title, taskList: [...col.rows,  {task_id: -i, task_title: '', spacer: true}]};
+            resp.columns[i] = {column_id: board[i].column_id, column_number: i , title: board[i].column_title, tasks: col.rows};
         }
     } catch (e) {
         errorLogger.error('Failed to get board by id: ' + e);
@@ -67,7 +67,6 @@ const getBoardById = async (req, res) => {
             message: 'Failed to get board by Id'
         })
     }
-    console.log(resp);
     res.json(resp);
 };
 
@@ -150,6 +149,26 @@ const getProjectById = async (req, res) => {
     res.json({...project, contributor, collaborators})
 };
 
+const updateTask = async (req, res) => {
+    const updatedTask = req.body;
+    console.log( updatedTask );
+
+    try {
+        await db.query('UPDATE tasks ' +
+            'SET title = $1, column_id = $2 ' +
+            'WHERE task_id = $3',
+            [updatedTask.title, updatedTask.column_id, updatedTask.task_id])
+    } catch (e) {
+        errorLogger.error('Failed to update task: ' + e);
+        return res.status(500).json({
+            success: false,
+            status: 'error',
+            message: 'Failed to update task'
+        })
+    }
+    res.json({success: true});
+};
+
 const saveBoardState = async (req, res) => {
     const { boardState } = req.body;
 
@@ -184,6 +203,7 @@ const saveBoardState = async (req, res) => {
 
 
 exports.addTaskToBoard = addTaskToBoard;
+exports.updateTask = updateTask;
 exports.getBoardById = getBoardById;
 exports.getProjects = getProjects;
 exports.getProjectById = getProjectById;
