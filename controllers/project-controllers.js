@@ -19,7 +19,7 @@ const addTaskToBoard = async (req, res) => {
     try{
         await client.query('BEGIN');
         createdTask = await client.query('INSERT INTO tasks (title, column_id) VALUES ($1, $2)' +
-            'RETURNING title, column_id, task_id',
+            'RETURNING title, column_id, task_id, priority, description',
             [taskTitle, taskColumnId]);
         createdTask = createdTask.rows[0];
         await client.query('COMMIT');
