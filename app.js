@@ -4,6 +4,7 @@ const cors = require('cors');
 let middleware = require('./middleware');
 const app = express();
 const server = app.listen(5000);
+
 const io = require('socket.io')(5010, {
     handlePreflightRequest: function (req, res) {
         var headers = { // socket cors headers
@@ -16,6 +17,7 @@ const io = require('socket.io')(5010, {
     }
 });
 io.origins('*:*'); // allow all request origins for sockets
+
 const schedule = require('node-schedule');
 
 const authRoutes = require('./routes/auth-routes');

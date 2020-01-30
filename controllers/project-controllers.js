@@ -155,9 +155,14 @@ const updateTask = async (req, res) => {
 
     try {
         await db.query('UPDATE tasks ' +
-            'SET title = $1, column_id = $2 ' +
-            'WHERE task_id = $3',
-            [updatedTask.title, updatedTask.column_id, updatedTask.task_id])
+            'SET title = $1, column_id = $2, ' +
+            'description = $3, priority = $4' +
+            'WHERE task_id = $5',
+            [
+                updatedTask.title, updatedTask.column_id,
+                updatedTask.description, Number(updatedTask.priority),
+                updatedTask.task_id
+            ])
     } catch (e) {
         errorLogger.error('Failed to update task: ' + e);
         return res.status(500).json({
