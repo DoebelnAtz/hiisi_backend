@@ -58,6 +58,23 @@ const getBoardById = async (req, res) => {
         for (var i = 0; i < board.length; i++) {
             let col = await db.query('SELECT t.priority, t.description, t.task_id, t.title, c.column_id FROM tasks t ' +
                 'JOIN boardcolumns c ON t.column_id = c.column_id AND c.column_id = $1', [board[i].column_id]);
+            let taskList;
+
+            try {
+                for (var j = 0; j < col.rows.length; j++){
+                    let collaborators = await db.query('' +
+                        'SELECT u.profile_pic, u.u_id, u.username ' +
+                        'FROM users u JOIN taskcollaborators c ' +
+                        'ON c.u_id = u.u_id WHERE c.task_id = $1', [col.rows[j].task_id]);
+                    col.rows[j] = {...col.rows[j], collaborators: collaborators.rows}
+                }
+            } catch (e) {
+                errorLogger.error('Failed to get task collaborators: ' + e);
+                return res.status(500).json({
+                    status: 'error',
+                    message: 'Failed to get task collaborators'
+                })
+            }
             resp.columns[i] = {column_id: board[i].column_id, column_number: i , title: board[i].column_title, tasks: col.rows};
         }
     } catch (e) {
@@ -173,6 +190,8 @@ const updateTask = async (req, res) => {
     }
     res.json({success: true});
 };
+
+
 
 const saveBoardState = async (req, res) => {
     const { boardState } = req.body;
