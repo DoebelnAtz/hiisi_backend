@@ -19,9 +19,12 @@ const addTaskToBoard = async (req, res) => {
     try{
         await client.query('BEGIN');
         createdTask = await client.query('INSERT INTO tasks (title, column_id) VALUES ($1, $2)' +
-            'RETURNING title, column_id, task_id, priority, description',
+            'RETURNING task_id, title, priority, description',
             [taskTitle, taskColumnId]);
         createdTask = createdTask.rows[0];
+        await client.query(
+            'INSERT INTO taskcollaborators (task_id, u_id) VALUES ($1, $2)',
+            [createdTask.task_id, userId]);
         await client.query('COMMIT');
     } catch (e) {
         await client.query('ROLLBACK');
@@ -34,7 +37,56 @@ const addTaskToBoard = async (req, res) => {
     } finally {
         client.release();
     }
-    res.status(201).json(createdTask);
+
+    let collaborators;
+    try {
+        collaborators = await db.query('' +
+            'SELECT t.task_id, u.username, u.profile_pic, u.u_id FROM tasks t ' +
+            'JOIN taskcollaborators c ON c.task_id = t.task_id ' +
+            'JOIN users u ON c.u_id = u.u_id ' +
+            'WHERE t.task_id = $1', [createdTask.task_id]);
+        collaborators = collaborators.rows;
+    } catch (e) {
+        errorLogger.error('Failed to get collaborators to task: ' + e);
+        return res.status(500).json({
+            status: 'error',
+            message: 'Failed to get collaborators to task'
+        })
+    }
+    res.status(201).json({...createdTask, collaborators: collaborators});
+};
+
+const addCollaboratorToTask = async (req, res) => {
+    const { userId, taskId } = req.body;
+
+    try {
+        await db.query(
+            'INSERT INTO taskcollaborators (u_id, task_id) VALUES ($1, $2)',
+            [userId, taskId]
+        )
+    } catch (e) {
+        errorLogger.error('Failed to add collaborator to task: ' + e);
+        return res.status(500).json({
+            status: 'error',
+            message: 'Failed to add collaborator to task'
+        })
+    }
+    let collaborators;
+    try {
+        collaborators = await db.query('' +
+            'SELECT t.task_id, u.username, u.profile_pic, u.u_id FROM tasks t ' +
+            'JOIN taskcollaborators c ON c.task_id = t.task_id ' +
+            'JOIN users u ON c.u_id = u.u_id ' +
+            'WHERE t.task_id = $1', [taskId]);
+        collaborators = collaborators.rows;
+    } catch (e) {
+        errorLogger.error('Failed to get collaborators to task: ' + e);
+        return res.status(500).json({
+            status: 'error',
+            message: 'Failed to get collaborators to task'
+        })
+    }
+    res.status(201).json({collaborators});
 };
 
 const getBoardById = async (req, res) => {
