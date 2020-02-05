@@ -32,6 +32,16 @@ router.get(
 );
 
 router.get(
+    '/boards/tasks/:tid',
+    projectControllers.getTaskById
+);
+
+router.post(
+    '/boards/tasks/add_user',
+    projectControllers.addCollaboratorToTask
+);
+
+router.get(
     '/',
     projectControllers.getProjects
 );
