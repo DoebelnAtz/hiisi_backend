@@ -79,7 +79,7 @@ const getUsers = async (req, res) => {
             'u_id, ' +
             'username, ' +
             'profile_pic, ' +
-            'coalitionpoints, ' +
+            'coalition_points, ' +
             'coalition_rank, ' +
             'grade, ' +
             'level, ' +
@@ -87,8 +87,9 @@ const getUsers = async (req, res) => {
             'wallet, ' +
             'location, ' +
             'active, ' +
-            'correctionpoints' +
-            ' FROM users');
+            'correction_points, ' +
+            'achievement_points ' +
+            'FROM users');
         users = users.rows;
     } catch (e) {
         return console.log('ERROR: ' + e);
@@ -123,7 +124,8 @@ const getUserById = async (req, res) => {
             'wallet, ' +
             'location, ' +
             'active, ' +
-            'correction_points ' +
+            'correction_points, ' +
+            'achievement_points ' +
             'FROM users WHERE u_id = $1', [userId]);
         user = user.rows[0];
     } catch (e) {
