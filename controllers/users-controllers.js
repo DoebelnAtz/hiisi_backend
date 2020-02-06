@@ -26,10 +26,12 @@ const getMe = async (req, res) => {
             'wallet, ' +
             'location, ' +
             'active, ' +
-            'correction_points ' +
+            'correction_points, ' +
+            'achievement_points ' +
             'FROM users WHERE u_id = $1', [userId]);
         user = user.rows[0];
     } catch (e) {
+        errorLogger.error('Failed to get users by id: ' + e);
         return res.status(500).json({
             status: 'error',
             message: 'Failed to get users by id.'

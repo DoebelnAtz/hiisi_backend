@@ -38,8 +38,8 @@ const updateUsers = async () => {
                 ' WHERE u_id = $12',
                 [
                     userinfo.image_url,
-                    userinfo.cursus_users[0].level,
-                    userinfo.cursus_users[0].grade,
+                    userinfo.cursus_users[1].level,
+                    userinfo.cursus_users[1].grade,
                     userinfo.pool_month + ' ' + userinfo.pool_year,
                     userinfo.wallet,
                     userinfo.location,
@@ -53,8 +53,8 @@ const updateUsers = async () => {
         }
         await client.query('COMMIT');
     } catch (e) {
-        await client.query('ROLLBACK');
         errorLogger.error('Failed to update users: ' + e);
+        await client.query('ROLLBACK');
     } finally {
         client.release();
     }
