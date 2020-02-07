@@ -5,6 +5,8 @@ const getResources = async (req, res) => {
 
     const userId = req.decoded.u_id;
 
+    const pagination = req.query.page;
+
     let resources;
     try {
         resources = await db.query(
@@ -12,7 +14,7 @@ const getResources = async (req, res) => {
             'r.description, r.title, r.link, r.votes, r.published_date, ' +
             'u.profile_pic, u.u_id, u.username ' +
             'FROM resources r JOIN users u ON u.u_id = r.author ' +
-            'WHERE 1 = 1' , []);
+            'WHERE 1 = 1 LIMIT $1' , [20 * Number(pagination)]);
         resources = resources.rows.map(r => {return ({...r, owner: Number(r.u_id) === Number(userId)}) })
     } catch(e) {
         errorLogger.error('Failed to get resources: ' + e);
@@ -41,21 +43,21 @@ const getResources = async (req, res) => {
     res.json(resources);
 };
 
-const addTagsToResource = async (req, res) => {
-    const { tags } = req.body;
+const addTagToResource = async (req, res) => {
+    const { tag, rId } = req.body;
+
 
     const client = await db.connect();
-    let createdTags = [];
+    let createdTag;
     try{
         await client.query('BEGIN');
-        for (var i = 0; i < tags.length; i++) {
-            let created = await client.query(
-                'INSERT INTO tagconnections (tag_id, r_id) ' +
-                'VALUES ($1, $2) RETURNING tag_id, r_id',
-                [tags[i].tag_id, tags[i].r_id]
-            );
-            createdTags.push(created.rows[0]);
-        }
+
+        let created = await client.query(
+            'INSERT INTO tagconnections (tag_id, r_id) ' +
+            'VALUES ($1, $2) RETURNING tag_id, r_id',
+            [tag.tag_id, rId]
+        );
+            createdTag = created.rows[0];
         await client.query('COMMIT');
     } catch (e) {
         await client.query('ROLLBACK');
@@ -68,7 +70,7 @@ const addTagsToResource = async (req, res) => {
     } finally {
         client.release();
     }
-    res.json(createdTags)
+    res.json(tag)
 };
 
 const getResourceById = async (req, res) => {
@@ -129,7 +131,7 @@ const addResource = async (req, res) => {
             'u.profile_pic, u.username, u.u_id ' +
             'FROM inserted i JOIN users u ON u.u_id = i.author WHERE u.u_id = $5',
             [title, description, link, t_id, userId]);
-        createdResource = createdResource.rows[0];
+        createdResource = {...createdResource.rows[0], tags: []};
         await client.query('COMMIT');
     } catch (e) {
         await client.query('ROLLBACK');
@@ -206,9 +208,8 @@ const searchTags = async (req, res) => {
 
   let tags;
   try {
-      tags = await db.query('SELECT * FROM tags WHERE title LIKE $1', [query + '%']);
+      tags = await db.query('SELECT * FROM tags WHERE title LIKE $1 LIMIT 10', [query + '%']);
       tags = tags.rows;
-      console.log(tags);
   } catch(e) {
       errorLogger.error('Failed to find tags: ' + e);
       return res.status(500).json({
@@ -227,6 +228,6 @@ exports.addResource = addResource;
 
 exports.deleteResource = deleteResource;
 
-exports.addTagsToResource = addTagsToResource;
+exports.addTagToResource = addTagToResource;
 
 exports.searchTags = searchTags;

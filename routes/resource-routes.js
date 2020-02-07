@@ -25,7 +25,7 @@ router.post(
 
 router.post(
     '/add_tags',
-    resourceController.addTagsToResource
+    resourceController.addTagToResource
 );
 
 router.delete(

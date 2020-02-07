@@ -131,7 +131,7 @@ const addUserToThread = async (req, res) => {
     try {
         let checkSenderIsInThread = await db.query(
             "SELECT * FROM threadconnections WHERE user_id = $1 " +
-            "WHERE thread_id = $2", [senderId, threadId]);
+            "AND thread_id = $2", [senderId, threadId]);
         if (!checkSenderIsInThread.rows.length) {
             return res.status(401).json({
                 success: false,
