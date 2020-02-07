@@ -40,6 +40,9 @@ const logIncomingRequests = (req, res, next) => {
     }
     else if (req.method === "GET")
         accessLogger.info(`User: ${req.decoded.username} | Method: ${req.method} | To: ${req.path}`);
+    else {
+        accessLogger.info(`User: ${req.decoded.username} | Method: ${req.method} | To: ${req.path} | Body: ${JSON.stringify(req.body)}`);
+    }
     next();
 };
 

@@ -26,7 +26,7 @@ const blogRoutes = require('./routes/blog-routes');
 const userJobs = require('./scheduled-jobs/update-users');
 const projectRotes = require('./routes/project-routes');
 const messageRoutes = require('./routes/message-routes');
-
+const resourceRoutes = require('./routes/resource-routes');
 const chatController = require('./controllers/chat-controllers');
 
 schedule.scheduleJob('*/10 * * * * ', userJobs.update); // execute job every X minutes, cron-like syntax
@@ -37,6 +37,7 @@ app.use('/api/auth', authRoutes); // auth routes before check token, because log
 app.use('/api', middleware.checkToken);
 app.use('/', middleware.logRequests); // log every incoming access request except auth routes, we don't want to log incoming passwords,
 io.use((socket, next) => middleware.checkSocketToken(socket, next)); // make sure socket requests token is correct;
+app.use('/api/resources', resourceRoutes);
 app.use('/api/projects', projectRotes);
 app.use('/api/messages', messageRoutes);
 app.use('/api/users', userRoutes);
@@ -54,7 +55,6 @@ io.on('connection', socket => {
     console.log(clients_in_the_room);
     for (var clientId in clients_in_the_room.sockets ) {
         console.log('client: %s', clientId); //Seeing is believing
-
     }
     socket.join(socket.id, () => {
         console.log('Joined room: ' + socket.id)

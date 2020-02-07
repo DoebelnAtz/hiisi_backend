@@ -99,7 +99,8 @@ const createBlog = async (req, res) => {
 
     let user;
     try {
-        user = await db.query('SELECT username, intraid FROM users WHERE u_id = $1', [authorId]);
+        user = await db.query(
+            'SELECT username, intraid FROM users WHERE u_id = $1', [authorId]);
         user = user.rows[0]
     } catch (e) {
         console.log(e);
@@ -120,10 +121,13 @@ const createBlog = async (req, res) => {
     let createdBlog;
     try{
         await client.query('BEGIN');
-        let res = await client.query('INSERT INTO commentthreads DEFAULT VALUES RETURNING t_id');
+        let res = await client.query(
+            'INSERT INTO commentthreads DEFAULT VALUES RETURNING t_id');
         res = res.rows[0];
         createdBlog = await client.query(
-            'INSERT INTO blogs(title, content, author, commentthread, published_date) VALUES($1, $2, $3, $4, $5) RETURNING b_id, title, content, author, commentthread, likes, published_date',
+            'INSERT INTO blogs(title, content, author, commentthread, published_date) ' +
+            'VALUES($1, $2, $3, $4, $5) ' +
+            'RETURNING b_id, title, content, author, commentthread, likes, published_date',
             [
                 title,
                 content,
@@ -162,8 +166,13 @@ const likeBlog = async (req, res) => {
 
     try{
         await client.query('BEGIN');
+
         await client.query('UPDATE blogs SET likes = likes + 1 WHERE b_id = $1', [blogId]);
-        await client.query('INSERT INTO likedposts (user_id, blog_id) VALUES ($1, $2)', [userId, blogId]);
+
+        await client.query(
+            'INSERT INTO likedposts (user_id, blog_id) ' +
+            'VALUES ($1, $2)', [userId, blogId]);
+
         await client.query('COMMIT');
     } catch (e) {
         await client.query('ROLLBACK');

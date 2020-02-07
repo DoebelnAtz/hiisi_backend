@@ -43,7 +43,8 @@ const getUsersInThread = async (req, res) => {
     let users;
     try {
         users = await db.query(
-            'SELECT thread_id, username, profile_pic, u_id FROM users join threadconnections ON user_id = u_id WHERE thread_id = $1'
+            'SELECT thread_id, username, profile_pic, u_id FROM users ' +
+            'JOIN threadconnections ON user_id = u_id WHERE thread_id = $1'
             ,[threadId]
         );
         users = users.rows;
@@ -65,7 +66,8 @@ const getThreadsByUserId = async (req, res) => {
         threads = await db.query(
             'SELECT thread_name, user_id, username, u_id, profile_pic, thread_id ' +
             'FROM users JOIN threadconnections ' +
-            'ON user_id = u_id JOIN threads ON t_id = thread_id ' +
+            'ON user_id = u_id ' +
+            'JOIN threads ON t_id = thread_id ' +
             'WHERE users.u_id = $1',
             [userId]
         );
@@ -91,9 +93,13 @@ const createNewThread = async (req, res) => {
     let createdThread;
     try{
         await client.query('BEGIN');
-        createdThread = await client.query('INSERT INTO threads (thread_name) VALUES ($1) RETURNING t_id AS thread_id, thread_name',[threadName]);
+        createdThread = await client.query(
+            'INSERT INTO threads (thread_name) ' +
+            'VALUES ($1) RETURNING t_id AS thread_id, thread_name',[threadName]);
         createdThread = createdThread.rows[0];
-        await client.query('INSERT INTO threadconnections (user_id, thread_id) VALUES ($1, $2)', [userId, createdThread.thread_id]);
+        await client.query(
+            'INSERT INTO threadconnections (user_id, thread_id) ' +
+            'VALUES ($1, $2)', [userId, createdThread.thread_id]);
         await client.query('COMMIT');
     } catch (e) {
         await client.query('ROLLBACK');
@@ -123,7 +129,9 @@ const addUserToThread = async (req, res) => {
         })
     }
     try {
-        let checkSenderIsInThread = await db.query("SELECT * FROM threadconnections WHERE user_id = $1 AND thread_id = $2", [senderId, threadId]);
+        let checkSenderIsInThread = await db.query(
+            "SELECT * FROM threadconnections WHERE user_id = $1 " +
+            "WHERE thread_id = $2", [senderId, threadId]);
         if (!checkSenderIsInThread.rows.length) {
             return res.status(401).json({
                 success: false,
@@ -141,8 +149,12 @@ const addUserToThread = async (req, res) => {
     }
     let addedUser;
     try{
-        await db.query("INSERT INTO threadconnections (thread_id, user_id) VALUES ($1, $2)", [threadId, targetId]);
-        addedUser = await db.query('SELECT username, profile_pic, u_id FROM users WHERE u_id = $1', [targetId]);
+        await db.query(
+            "INSERT INTO threadconnections (thread_id, user_id) " +
+            "VALUES ($1, $2)", [threadId, targetId]);
+        addedUser = await db.query(
+            'SELECT username, profile_pic, u_id FROM users ' +
+            'WHERE u_id = $1', [targetId]);
         addedUser = addedUser.rows[0];
     } catch (e) {
         errorLogger.error('Failed to add user to thread: ' + e);

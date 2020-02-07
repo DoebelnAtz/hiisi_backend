@@ -14,7 +14,8 @@ const getCommentThreadById = async (req, res) => {
     try { // could be optimized by returning necessary comment data through comments JOIN voted..., keep as is for now..
         sender = await db.query(
             'SELECT comment_id, vote ' +
-            'FROM users join votedcomments ON votedcomments.user_id = users.u_id AND users.u_id = $1',
+            'FROM users join votedcomments ON votedcomments.user_id = users.u_id ' +
+            'WHERE users.u_id = $1',
             [senderId]
         );
         sender = sender.rows.map(row => {
@@ -37,8 +38,10 @@ const getCommentThreadById = async (req, res) => {
     let commentThread;
     try {
         commentThread = await db.query(
-            'SELECT comments.c_id, commentcontent, author, parentthread, comment_date, childthread, username, profile_pic, u_id ' +
-            'FROM comments JOIN users ON comments.parentthread = $1 AND comments.author = users.u_id',
+            'SELECT comments.c_id, commentcontent, author, parentthread, ' +
+            'comment_date, childthread, username, profile_pic, u_id ' +
+            'FROM comments JOIN users ON comments.parentthread = $1 ' +
+            'WHERE comments.author = users.u_id',
             [tid]
         );
         commentThread = commentThread.rows;
@@ -82,7 +85,8 @@ const createComment = async (req, res) => {
     console.log(threadId, content, authorId);
     let thread;
     try {
-        thread = await db.query('SELECT * FROM commentthreads WHERE t_id = $1', [threadId])
+        thread = await db.query(
+            'SELECT * FROM commentthreads WHERE t_id = $1', [threadId]);
         if (!(thread = thread.rows[0]))
             return res.status(401).json({
                 status: 'error',
@@ -98,7 +102,8 @@ const createComment = async (req, res) => {
     let commentAuthor;
     try {
         commentAuthor = await db.query(
-            'SELECT username, intraid, profile_pic FROM users WHERE u_id = $1',
+            'SELECT username, intraid, profile_pic FROM users ' +
+            'WHERE u_id = $1',
             [authorId]);
         if (!(commentAuthor = commentAuthor.rows[0]))
             return res.status(401).json({
@@ -116,7 +121,8 @@ const createComment = async (req, res) => {
     let createdComment;
     try{
         await client.query('BEGIN');
-        let res = await client.query('INSERT INTO commentthreads DEFAULT VALUES RETURNING t_id');
+        let res = await client.query(
+            'INSERT INTO commentthreads DEFAULT VALUES RETURNING t_id');
         res = res.rows[0];
         createdComment = await client.query(
             'INSERT INTO comments(commentcontent, author, parentthread, childthread) ' +

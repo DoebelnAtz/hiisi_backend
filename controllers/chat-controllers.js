@@ -10,7 +10,9 @@ const saveMessageToDB = async(socket, message, io) => {
     const threadId = message.t_id;
     const incomingMessage = message;
     try {
-        let isAllowed = await db.query('SELECT * from threadconnections where user_id = $1 AND thread_id = $2', [senderId, threadId]);
+        let isAllowed = await db.query(
+            'SELECT * from threadconnections where user_id = $1 ' +
+            'WHERE thread_id = $2', [senderId, threadId]);
         console.log(socket.id);
         console.log(socket.rooms);
         console.log(isAllowed.rows);
@@ -23,7 +25,10 @@ const saveMessageToDB = async(socket, message, io) => {
     }
     let createdMessage;
     try {
-        createdMessage = await db.query('INSERT INTO messages (message, sender, thread) VALUES ($1, $2, $3) RETURNING m_id, time_sent, message, sender',
+        createdMessage = await db.query(
+            'INSERT INTO messages (message, sender, thread) ' +
+            'VALUES ($1, $2, $3) ' +
+            'RETURNING m_id, time_sent, message, sender',
             [incomingMessage.message, senderId, threadId]);
         createdMessage = createdMessage.rows[0];
         console.log(createdMessage);
