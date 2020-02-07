@@ -29,7 +29,7 @@ const messageRoutes = require('./routes/message-routes');
 const resourceRoutes = require('./routes/resource-routes');
 const chatController = require('./controllers/chat-controllers');
 
-schedule.scheduleJob('*/10 * * * * ', userJobs.update); // execute job every X minutes, cron-like syntax
+schedule.scheduleJob('*/30 * * * * ', userJobs.update); // execute job every X minutes, cron-like syntax
 
 app.use(cors());
 app.use(bodyParser.json());

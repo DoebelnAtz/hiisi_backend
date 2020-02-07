@@ -3,6 +3,8 @@ const { errorLogger, accessLogger } = require('../logger');
 
 const getResources = async (req, res) => {
 
+    const userId = req.decoded.u_id;
+
     let resources;
     try {
         resources = await db.query(
@@ -11,7 +13,7 @@ const getResources = async (req, res) => {
             'u.profile_pic, u.u_id, u.username ' +
             'FROM resources r JOIN users u ON u.u_id = r.author ' +
             'WHERE 1 = 1' , []);
-        resources = resources.rows;
+        resources = resources.rows.map(r => {return ({...r, owner: Number(r.u_id) === Number(userId)}) })
     } catch(e) {
         errorLogger.error('Failed to get resources: ' + e);
         return res.status(500).json({
@@ -23,7 +25,7 @@ const getResources = async (req, res) => {
     try {
         for (var i = 0; i < resources.length; i++) {
             tags = await db.query(
-                'SELECT t.title, t.tag_id FROM tags t ' +
+                'SELECT t.title, t.tag_id, t.color FROM tags t ' +
                 'JOIN tagconnections c ON c.tag_id = t.tag_id ' +
                 'WHERE c.r_id = $1', [resources[i].r_id]);
             tags = tags.rows;
@@ -37,6 +39,36 @@ const getResources = async (req, res) => {
         })
     }
     res.json(resources);
+};
+
+const addTagsToResource = async (req, res) => {
+    const { tags } = req.body;
+
+    const client = await db.connect();
+    let createdTags = [];
+    try{
+        await client.query('BEGIN');
+        for (var i = 0; i < tags.length; i++) {
+            let created = await client.query(
+                'INSERT INTO tagconnections (tag_id, r_id) ' +
+                'VALUES ($1, $2) RETURNING tag_id, r_id',
+                [tags[i].tag_id, tags[i].r_id]
+            );
+            createdTags.push(created.rows[0]);
+        }
+        await client.query('COMMIT');
+    } catch (e) {
+        await client.query('ROLLBACK');
+        errorLogger.error('Failed to add tags: ' + e);
+        return res.status(500).json({
+            success: false,
+            status: 'error',
+            message: 'Failed to add tags.'
+        })
+    } finally {
+        client.release();
+    }
+    res.json(createdTags)
 };
 
 const getResourceById = async (req, res) => {
@@ -62,7 +94,7 @@ const getResourceById = async (req, res) => {
     let tags;
     try {
         tags = await db.query(
-            'SELECT t.title, t.tag_id FROM ' +
+            'SELECT t.title, t.tag_id, t.color FROM ' +
             'tags t JOIN tagconnections c ' +
             'ON t.tag_id = c.tag_id WHERE c.r_id = $1', [resourceId]);
         tags = tags.rows;
@@ -169,6 +201,24 @@ const deleteResource = async (req,res) => {
     res.json({success: true})
 };
 
+const searchTags = async (req, res) => {
+  const query = req.query.q;
+
+  let tags;
+  try {
+      tags = await db.query('SELECT * FROM tags WHERE title LIKE $1', [query + '%']);
+      tags = tags.rows;
+      console.log(tags);
+  } catch(e) {
+      errorLogger.error('Failed to find tags: ' + e);
+      return res.status(500).json({
+          status: 'error',
+          message: 'Failed to find tags'
+      })
+  }
+  res.json(tags);
+};
+
 exports.getResources = getResources;
 
 exports.getResourceById = getResourceById;
@@ -176,3 +226,7 @@ exports.getResourceById = getResourceById;
 exports.addResource = addResource;
 
 exports.deleteResource = deleteResource;
+
+exports.addTagsToResource = addTagsToResource;
+
+exports.searchTags = searchTags;

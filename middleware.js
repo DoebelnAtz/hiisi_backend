@@ -39,7 +39,7 @@ const logIncomingRequests = (req, res, next) => {
         accessLogger.info(`User: ${req.decoded.username} | Method: ${req.method} | To: ${req.path} | Body: ${JSON.stringify(req.body)}`);
     }
     else if (req.method === "GET")
-        accessLogger.info(`User: ${req.decoded.username} | Method: ${req.method} | To: ${req.path}`);
+        accessLogger.info(`User: ${req.decoded.username} | Method: ${req.method} | To: ${req.path} | Query: ${JSON.stringify(req.query)}`);
     else {
         accessLogger.info(`User: ${req.decoded.username} | Method: ${req.method} | To: ${req.path} | Body: ${JSON.stringify(req.body)}`);
     }

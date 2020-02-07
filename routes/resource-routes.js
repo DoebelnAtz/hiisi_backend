@@ -9,6 +9,11 @@ router.get(
 );
 
 router.get(
+    '/tags',
+    resourceController.searchTags
+);
+
+router.get(
     '/:rid',
     resourceController.getResourceById
 );
@@ -16,6 +21,11 @@ router.get(
 router.post(
     '/add_resource',
     resourceController.addResource
+);
+
+router.post(
+    '/add_tags',
+    resourceController.addTagsToResource
 );
 
 router.delete(
