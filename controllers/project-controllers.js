@@ -1,6 +1,7 @@
 const { validationResult } = require('express-validator');
 const { errorLogger, accessLogger} = require('../logger');
 const db = require('../queries');
+const removeDup = require('../utils/utils').removeDup;
 
 const addTaskToBoard = async (req, res) => {
     const errors = validationResult(req);
@@ -90,68 +91,140 @@ const addCollaboratorToTask = async (req, res) => {
 };
 
 const getBoardById = async (req, res) => {
+
     const boardId = req.params.bid;
     // lol, this will be fun to optimize..
     let board;
+
     try {
-        board = await db.query('SELECT c.title AS column_title, b.board_id, c.column_id FROM boards b JOIN boardcolumns c ' +
-            'ON b.board_id = c.board_id WHERE b.board_id = $1', [boardId]);
+        board = await db.query(
+            `SELECT 
+            u.username, u.profile_pic, u.u_id, 
+            c.title AS column_title, c.column_id, 
+            b.board_id, 
+            t.priority, t.title AS task_title, t.task_id, t.description 
+            FROM boards b 
+            JOIN boardcolumns c 
+            ON b.board_id = c.board_id 
+            LEFT JOIN tasks t ON t.column_id = c.column_id 
+            LEFT JOIN taskcollaborators tc ON tc.task_id = t.task_id 
+            LEFT JOIN users u ON u.u_id = tc.u_id WHERE b.board_id = $1 ORDER BY c.column_id ASC, task_title ASC`
+            , [boardId]);
         board = board.rows;
-    } catch (e) {
-        errorLogger.error('Failed to get board by id: ' + e);
-        return res.status(500).json({
-            status: 'error',
-            message: 'Failed to get board by id'
-        })
-    }
-    let resp;
-    try {
-        resp = {boardId: board[0].board_id, columns: []};
-        for (var i = 0; i < board.length; i++) {
-            let col = await db.query(
-                'SELECT t.priority, t.description, t.task_id, t.title, c.column_id ' +
-                'FROM tasks t ' +
-                'JOIN boardcolumns c ON t.column_id = c.column_id ' +
-                'WHERE c.column_id = $1',
-                [board[i].column_id]);
-            try {
-                let collaborators = await db.query('SELECT u.profile_pic, u.u_id, t.task_id FROM users u ' +
-                    'JOIN taskcollaborators p ON p.u_id = u.u_id ' +
-                    'JOIN tasks t ON t.task_id = p.task_id ' +
-                    'WHERE t.column_id = $1', [board[i].column_id]);
+        let taskId = removeDup(board.map(t => t.task_id));
+        let colId = removeDup(board.map(t => t.column_id));
+        let colTitles = removeDup(board.map(t => t.column_title));
+        let taskTitles = removeDup(board.map(t => t.task_title));
+        console.log(colTitles);
+        let columns = [];
+        let prevCol = 0;
+        let prevCollab = 0;
+        let taskIndex = -1;
+        let colIndex = -1;
+        let prevTask = 0;
 
-                // Getting all collaborators for each
-                // column and formatting JSON to save 300ms on query time
-                // could still be improved
+        for (let i = 0; i < board.length; i++) {
 
-                for (var j = 0; j < col.rows.length; j++) {
-                    col.rows[j] = {
-                        ...col.rows[j],
-                        collaborators: collaborators.rows.filter(
-                            c => c.task_id === col.rows[j].task_id)
-                    }
-                }
-            } catch (e) {
-                errorLogger.error('Failed to get task collaborators: ' + e);
-                return res.status(500).json({
-                    status: 'error',
-                    message: 'Failed to get task collaborators'
-                })
+            if (board[i].column_id !== prevCol) {
+                colIndex++;
+                columns.push({
+                    column_title: board[i].column_title,
+                    column_id: board[i].column_id,
+                    column_number: colIndex,
+                    tasks: []
+                });
+                taskIndex = -1;
+
             }
-            resp.columns[i] = {
-                column_id: board[i].column_id,
-                column_number: i ,
-                title: board[i].column_title,
-                tasks: col.rows};
+            if(board[i].task_id !== prevTask && !!board[i].task_id) {
+                taskIndex++;
+                columns[colIndex].tasks.push({
+                    title: board[i].task_title,
+                    task_id: board[i].task_id,
+                    priority: board[i].priority,
+                    collaborators: []
+                });
+            }
+            if (!!board[i].u_id) {
+                columns[colIndex].tasks[taskIndex].collaborators.push({
+                    u_id: board[i].u_id,
+                    username: board[i].username,
+                    profile_pic: board[i].profile_pic
+                });
+            }
+
+            prevTask  = board[i].task_id;
+            prevCol = board[i].column_id;
         }
-    } catch (e) {
-        errorLogger.error('Failed to get board by id: ' + e);
+        board = {columns};
+    } catch(e) {
+        errorLogger.error('Failed to get board by Id: ' + e);
         return res.status(500).json({
             status: 'error',
             message: 'Failed to get board by Id'
         })
     }
-    res.json(resp);
+    // try {
+    //     board = await db.query(
+    //         'SELECT c.title AS column_title, b.board_id, c.column_id FROM boards b ' +
+    //         'JOIN boardcolumns c ' +
+    //         'ON b.board_id = c.board_id WHERE b.board_id = $1', [boardId]);
+    //     board = board.rows;
+    // } catch (e) {
+    //     errorLogger.error('Failed to get board by id: ' + e);
+    //     return res.status(500).json({
+    //         status: 'error',
+    //         message: 'Failed to get board by id'
+    //     })
+    // }
+    // let resp;
+    // try {
+    //     resp = {boardId: board[0].board_id, columns: []};
+    //     for (var i = 0; i < board.length; i++) {
+    //         let col = await db.query(
+    //             'SELECT t.priority, t.description, t.task_id, t.title, c.column_id ' +
+    //             'FROM tasks t ' +
+    //             'JOIN boardcolumns c ON t.column_id = c.column_id ' +
+    //             'WHERE c.column_id = $1',
+    //             [board[i].column_id]);
+    //         try {
+    //             let collaborators = await db.query('SELECT u.profile_pic, u.u_id, t.task_id FROM users u ' +
+    //                 'JOIN taskcollaborators p ON p.u_id = u.u_id ' +
+    //                 'JOIN tasks t ON t.task_id = p.task_id ' +
+    //                 'WHERE t.column_id = $1', [board[i].column_id]);
+    //
+    //             // Getting all collaborators for each
+    //             // column and formatting JSON to save 300ms on query time
+    //             // could still be improved
+    //
+    //             for (var j = 0; j < col.rows.length; j++) {
+    //                 col.rows[j] = {
+    //                     ...col.rows[j],
+    //                     collaborators: collaborators.rows.filter(
+    //                         c => c.task_id === col.rows[j].task_id)
+    //                 }
+    //             }
+    //         } catch (e) {
+    //             errorLogger.error('Failed to get task collaborators: ' + e);
+    //             return res.status(500).json({
+    //                 status: 'error',
+    //                 message: 'Failed to get task collaborators'
+    //             })
+    //         }
+    //         resp.columns[i] = {
+    //             column_id: board[i].column_id,
+    //             column_number: i ,
+    //             title: board[i].column_title,
+    //             tasks: col.rows};
+    //     }
+    // } catch (e) {
+    //     errorLogger.error('Failed to get board by id: ' + e);
+    //     return res.status(500).json({
+    //         status: 'error',
+    //         message: 'Failed to get board by Id'
+    //     })
+    // }
+    res.json(board);
 };
 
 const getProjects = async (req, res) => {

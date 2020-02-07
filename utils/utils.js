@@ -35,5 +35,10 @@ const sleep = (ms) => {
     return new Promise(resolve => setTimeout(resolve, ms));
 };
 
+const removeDup = (arr) => {
+    return (arr.filter((v, i) => arr.indexOf(v) === i));
+};
+
 exports.countAchievementPoints = countAchievementPoints;
 exports.sleep = sleep;
+exports.removeDup = removeDup;

@@ -37,8 +37,8 @@ app.use('/api/auth', authRoutes); // auth routes before check token, because log
 app.use('/api', middleware.checkToken);
 app.use('/', middleware.logRequests); // log every incoming access request except auth routes, we don't want to log incoming passwords,
 io.use((socket, next) => middleware.checkSocketToken(socket, next)); // make sure socket requests token is correct;
-app.use('/api/resources', resourceRoutes);
 app.use('/api/projects', projectRotes);
+app.use('/api/resources', resourceRoutes);
 app.use('/api/messages', messageRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/blogs', blogRoutes);
