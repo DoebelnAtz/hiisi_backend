@@ -6,15 +6,40 @@ const getResources = async (req, res) => {
     const userId = req.decoded.u_id;
 
     const pagination = req.query.page;
-
+    const filter = req.query.filter;
+    const query = (filter !== 'false' ? 't.title' : '1') + ' = ' + (filter !== 'false' ? filter : '1');
+    console.log(query, req.query);
     let resources;
     try {
-        resources = await db.query(
-            'SELECT r.r_id, ' +
-            'r.description, r.title, r.link, r.votes, r.published_date, ' +
-            'u.profile_pic, u.u_id, u.username ' +
-            'FROM resources r JOIN users u ON u.u_id = r.author ' +
-            'WHERE 1 = 1 LIMIT $1' , [20 * Number(pagination)]);
+        // This is not a nice query, couldn't figure out how to do it
+        // cleaner but it is much faster than making a second looping query...
+        // Now to fix all other looping queries..
+        if (filter === 'false') {
+            resources = await db.query(
+                `SELECT u.username, u.profile_pic, u.u_id,
+            r.votes, r.title, r.r_id, r.link, r.published_date,
+            c.tags, c.colors FROM resources r
+            JOIN users u ON r.author = u.u_id
+            JOIN (
+            SELECT c.r_id, array_agg(t.title) AS tags, array_agg(t.color) AS colors
+            FROM tagconnections c
+            JOIN tags t ON t.tag_id = c.tag_id
+            GROUP BY c.r_id) c using (r_id) LIMIT $1`,
+                [pagination * 20]);
+        } else {
+            resources = await db.query(
+                `SELECT u.username, u.profile_pic, u.u_id, 
+            r.votes, r.title, r.r_id, r.link, r.published_date, 
+            c.tags, c.colors FROM resources r 
+            JOIN users u ON r.author = u.u_id 
+            JOIN (
+            SELECT c.r_id, array_agg(t.title) AS tags, array_agg(t.color) AS colors 
+            FROM tagconnections c 
+            JOIN tags t ON t.tag_id = c.tag_id 
+            GROUP BY c.r_id) c using (r_id) WHERE $1 = ANY (tags) LIMIT $2`,
+                [filter, pagination * 20]);
+        }
+
         resources = resources.rows.map(r => {return ({...r, owner: Number(r.u_id) === Number(userId)}) })
     } catch(e) {
         errorLogger.error('Failed to get resources: ' + e);
@@ -24,22 +49,6 @@ const getResources = async (req, res) => {
         })
     }
     let tags;
-    try {
-        for (var i = 0; i < resources.length; i++) {
-            tags = await db.query(
-                'SELECT t.title, t.tag_id, t.color FROM tags t ' +
-                'JOIN tagconnections c ON c.tag_id = t.tag_id ' +
-                'WHERE c.r_id = $1', [resources[i].r_id]);
-            tags = tags.rows;
-            resources[i] = {...resources[i], tags};
-        }
-    } catch(e) {
-        errorLogger.error('Failed to get tags for resource: ' + e);
-        return res.status(500).json({
-            status: 'error',
-            message: 'Failed to get tags for resource'
-        })
-    }
     res.json(resources);
 };
 
@@ -76,6 +85,7 @@ const addTagToResource = async (req, res) => {
 const getResourceById = async (req, res) => {
 
     const resourceId = req.params.rid;
+    const senderId = req.decoded.u_id;
 
     let resource;
     try {
@@ -84,7 +94,7 @@ const getResourceById = async (req, res) => {
             'u.profile_pic, u.u_id, u.username ' +
             'FROM resources r JOIN users u ON u.u_id = r.author ' +
             'WHERE r.r_id = $1' , [resourceId]);
-        resource = resource.rows[0];
+        resource = {...resource.rows[0], owner: resource.rows[0].u_id === senderId};
     } catch(e) {
         errorLogger.error('Failed to get resource: ' + e);
         return res.status(500).json({

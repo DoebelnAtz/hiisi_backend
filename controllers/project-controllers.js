@@ -91,7 +91,7 @@ const addCollaboratorToTask = async (req, res) => {
 
 const getBoardById = async (req, res) => {
     const boardId = req.params.bid;
-
+    // lol, this will be fun to optimize..
     let board;
     try {
         board = await db.query('SELECT c.title AS column_title, b.board_id, c.column_id FROM boards b JOIN boardcolumns c ' +
@@ -269,13 +269,14 @@ const getTaskById = async (req, res) => {
             'WHERE t.task_id = $1'
             ,[taskId]
         );
+
         let collaborators = await db.query(
             'SELECT u.username, u.profile_pic, u.u_id ' +
             'FROM users u JOIN taskcollaborators c ON c.u_id = u.u_id ' +
             'WHERE c.task_id = $1'
             ,[taskId]
         );
-        task = {...task.rows[0], collaborators: collaborators.rows}
+        task = {...task.rows[0], collaborators: collaborators.rows, owner: !!collaborators.rows.find(col => col.u_id === userId)}
     } catch (e) {
         errorLogger.error('Failed to get task: ' + e);
         return res.status(500).json({
