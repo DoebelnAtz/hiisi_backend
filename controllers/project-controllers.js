@@ -100,7 +100,7 @@ const getBoardById = async (req, res) => {
         board = await db.query(
             `SELECT 
             u.username, u.profile_pic, u.u_id, 
-            c.title AS column_title, c.column_id, 
+            c.title, c.column_id, 
             b.board_id, 
             t.priority, t.title AS task_title, t.task_id, t.description 
             FROM boards b 
@@ -111,14 +111,9 @@ const getBoardById = async (req, res) => {
             LEFT JOIN users u ON u.u_id = tc.u_id WHERE b.board_id = $1 ORDER BY c.column_id ASC, task_title ASC`
             , [boardId]);
         board = board.rows;
-        let taskId = removeDup(board.map(t => t.task_id));
-        let colId = removeDup(board.map(t => t.column_id));
-        let colTitles = removeDup(board.map(t => t.column_title));
-        let taskTitles = removeDup(board.map(t => t.task_title));
-        console.log(colTitles);
+
         let columns = [];
         let prevCol = 0;
-        let prevCollab = 0;
         let taskIndex = -1;
         let colIndex = -1;
         let prevTask = 0;
@@ -128,7 +123,7 @@ const getBoardById = async (req, res) => {
             if (board[i].column_id !== prevCol) {
                 colIndex++;
                 columns.push({
-                    column_title: board[i].column_title,
+                    title: board[i].title,
                     column_id: board[i].column_id,
                     column_number: colIndex,
                     tasks: []
