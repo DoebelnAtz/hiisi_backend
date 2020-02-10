@@ -7,14 +7,12 @@ const getResources = async (req, res) => {
 
     const pagination = req.query.page;
     const filter = req.query.filter;
-    const query = (filter !== 'false' ? 't.title' : '1') + ' = ' + (filter !== 'false' ? filter : '1');
-    console.log(query, req.query);
     let resources;
     try {
         // This is not a nice query, couldn't figure out how to do it
         // cleaner but it is much faster than making a second looping query...
         // Now to fix all other looping queries..
-        if (filter === 'false') {
+        if (filter === 'none') {
             resources = await db.query(
                 `SELECT u.username, u.profile_pic, u.u_id,
             r.votes, r.title, r.r_id, r.link, r.published_date,
@@ -25,7 +23,7 @@ const getResources = async (req, res) => {
             FROM tagconnections c
             JOIN tags t ON t.tag_id = c.tag_id
             GROUP BY c.r_id) c using (r_id) LIMIT $1`,
-                [pagination * 20]);
+                [Number(pagination) * 20]);
         } else {
             resources = await db.query(
                 `SELECT u.username, u.profile_pic, u.u_id, 
