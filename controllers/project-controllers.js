@@ -303,7 +303,6 @@ const getProjectById = async (req, res) => {
 
 const updateTask = async (req, res) => {
     const updatedTask = req.body;
-    console.log( updatedTask );
 
     try {
         await db.query('UPDATE tasks ' +

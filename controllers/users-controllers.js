@@ -55,7 +55,7 @@ const getUserFriends = async (req, res) => {
     try {
         friends = await db.query(
             'SELECT u_id, username, profile_pic ' +
-            'FROM users JOIN friends ON users.u_id = friends.two_id AND friends.one_id = $1',
+            'FROM users JOIN friends ON users.u_id = friends.two_id WHERE friends.one_id = $1',
             [uid]
         ); // not very descriptive column names (google many to many relationship)...
         friends = friends.rows;

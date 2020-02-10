@@ -1,3 +1,4 @@
+
 const { validationResult } = require('express-validator');
 
 const db = require('../queries');
@@ -188,6 +189,8 @@ const likeBlog = async (req, res) => {
     }
     res.json({success: true})
 };
+
+
 
 
 exports.getBlogs = getBlogs;

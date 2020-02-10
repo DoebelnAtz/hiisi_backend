@@ -228,6 +228,73 @@ const searchTags = async (req, res) => {
   res.json(tags);
 };
 
+const updateResource = async (req, res) => {
+    let { resource } = req.body;
+
+    let updatedResource;
+    try {
+        updatedResource = await db.query(`
+        UPDATE resources SET 
+        description = $1, 
+        link = $2, 
+        title = $3 
+        WHERE r_id = $4`, [resource.description, resource.link, resource.title, resource.r_id]);
+        updatedResource = updatedResource.rows;
+    } catch(e) {
+        errorLogger.error('Failed to update resource: ' + e);
+        return res.status(500).json({
+            status: 'error',
+            message: 'Failed to update resource'
+        })
+    }
+    res.json({success: true});
+};
+
+const voteResource = async (req, res) => {
+
+    const { vote, resourceId } = req.body;
+    const userId = req.decoded.u_id;
+    let voteTarget;
+    try {
+        voteTarget = await db.query(
+            `SELECT title, votes, r_id 
+            FROM resource WHERE r_id = $1`,
+            [resourceId]);
+        voteTarget = voteTarget.rows[0];
+    } catch(e) {
+        errorLogger.error('Failed to find target resource for voting: ' + e);
+        return res.status(500).json({
+            status: 'error',
+            message: 'Failed to find target resource for voting'
+        })
+    }
+    const client = await db.connect();
+    
+        try{
+            await client.query('BEGIN');
+            await client.query(
+                `INSERT INTO 
+                voteconnections (r_id, u_id, vote) 
+                VALUES ($1, $2, $3`,
+                [resourceId, userId, vote]);
+            await client.query(
+                'UPDATE resources SET votes = $1 WHERE r_id = $2',
+                [voteTarget.votes + vote, resourceId]);
+            await client.query('COMMIT');
+        } catch (e) {
+            await client.query('ROLLBACK');
+            errorLogger.error('Failed to vote resource: ' + e);
+            return res.status(500).json({
+                success: false,
+                status: 'error',
+                message: 'Failed to vote resource.'
+            })
+        } finally {
+            client.release();
+        }
+        res.json({success: true});
+};
+
 exports.getResources = getResources;
 
 exports.getResourceById = getResourceById;
@@ -239,3 +306,7 @@ exports.deleteResource = deleteResource;
 exports.addTagToResource = addTagToResource;
 
 exports.searchTags = searchTags;
+
+exports.updateResource = updateResource;
+
+exports.voteResource = voteResource;

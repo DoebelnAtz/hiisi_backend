@@ -28,9 +28,19 @@ router.post(
     resourceController.addTagToResource
 );
 
+router.post(
+    '/vote_resource',
+    resourceController.voteResource
+)
+
 router.delete(
     '/delete_resource',
     resourceController.deleteResource
+);
+
+router.put(
+    '/update_resource',
+    resourceController.updateResource
 );
 
 module.exports = router;
