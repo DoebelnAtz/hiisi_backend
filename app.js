@@ -8,7 +8,7 @@ const server = app.listen(5000);
 const io = require('socket.io')(5010, {
     handlePreflightRequest: function (req, res) {
         var headers = { // socket cors headers
-            'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+            'Access-Control-Allow-Headers': 'Content-Type, Authorization, Room',
             'Access-Control-Allow-Origin': 'http://localhost:3000',
             'Access-Control-Allow-Credentials': true
         };
@@ -45,28 +45,23 @@ app.use('/api/blogs', blogRoutes);
 
 io.on('connection', socket => {
     console.log("connected!");
-
-    socket.join(socket.request.headers.referer, () => { // when connecting to socket, join the appropriate room
-        console.log('Joined room: ' + socket.request.headers.referer);
+    socket.join(socket.request.headers.room, () => { // when connecting to socket, join the appropriate room
+        console.log('Joined room: ' + socket.request.headers.room);
 
         io.to(socket.request.headers.referer).emit('joined-room', socket.body.decoded)
     });
-    var clients_in_the_room = io.sockets.adapter.rooms[socket.request.headers.referer];
-    console.log(clients_in_the_room);
-    for (var clientId in clients_in_the_room.sockets ) {
-        console.log('client: %s', clientId); //Seeing is believing
-    }
+    console.log(socket.body.decoded);
     socket.join(socket.id, () => {
         console.log('Joined room: ' + socket.id)
     });
 
     socket.on('send-message', (message) => {
+        console.log(message);
         chatController.saveMessageToDB(socket, message, io);
     });
 
     socket.on('disconnect', () => {
         console.log('Disconnected from room: ' + socket.request.headers.referer)
         io.to(socket.request.headers.referer).emit('left-room', socket.body.decoded)
-
     })
 });

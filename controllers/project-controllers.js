@@ -343,7 +343,10 @@ const getTaskById = async (req, res) => {
             'WHERE c.task_id = $1'
             ,[taskId]
         );
-        task = {...task.rows[0], collaborators: collaborators.rows, owner: !!collaborators.rows.find(col => col.u_id === userId)}
+        task = {
+            ...task.rows[0],
+            collaborators: collaborators.rows, owner:
+                !!collaborators.rows.find(col => col.u_id === userId)}
     } catch (e) {
         errorLogger.error('Failed to get task: ' + e);
         return res.status(500).json({

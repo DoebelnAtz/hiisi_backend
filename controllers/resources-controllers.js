@@ -35,8 +35,8 @@ const getResources = async (req, res) => {
                 SELECT c.r_id, array_agg(t.title) AS tags, array_agg(t.color) AS colors 
                 FROM tagconnections c 
                 JOIN tags t ON t.tag_id = c.tag_id 
-                GROUP BY c.r_id) c using (r_id) WHERE $1 = ANY (tags) 
-                LEFT JOIN voteconnections vc ON vc.r_id = r.r_id AND vc.u_id = $2 LIMIT $3`,
+                GROUP BY c.r_id) c using (r_id) 
+                LEFT JOIN voteconnections vc ON vc.r_id = r.r_id AND vc.u_id = $2 WHERE $1 = ANY (tags)  LIMIT $3`,
                 [filter, userId, pagination * 20]);
         }
 
@@ -190,6 +190,8 @@ const deleteResource = async (req,res) => {
         try{
             await client.query('BEGIN');
             await client.query('DELETE FROM tagconnections t WHERE t.r_id = $1', [resourceId]);
+            await client.query('DELETE FROM voteconnections t WHERE t.r_id = $1', [resourceId]);
+
             await client.query(
                 'DELETE FROM resources WHERE r_id = $1',
                 [resourceId]
@@ -337,35 +339,7 @@ const voteResource = async (req, res) => {
         res.json({success: true});
 };
 
-const removeVote = async (req, res) => {
-    const userId = req.decoded.u_id;
-    const { vote, resourceId } = req.body;
 
-    const client = await db.connect();
-
-        try{
-            await client.query('BEGIN');
-            await client.query('DELETE FROM voteconnections WHERE u_id = $1 AND r_id = $2',
-                [userId, resourceId]);
-            let votes = await client.query(
-                'UPDATE resources SET votes = votes + $1 ' +
-                'WHERE r_id = $2 RETURNING votes',
-                [vote, resourceId]);
-            console.log(votes.rows[0]);
-            await client.query('COMMIT');
-        } catch (e) {
-            await client.query('ROLLBACK');
-            errorLogger.error('Failed to remove vote on resource: ' + e);
-            return res.status().json({
-                success: false,
-                status: 'error',
-                message: 'Failed to remove vote on resource.'
-            })
-        } finally {
-            client.release();
-        }
-    res.json({success: true});
-};
 
 exports.getResources = getResources;
 
@@ -382,5 +356,3 @@ exports.searchTags = searchTags;
 exports.updateResource = updateResource;
 
 exports.voteResource = voteResource;
-
-exports.removeVote = removeVote;
