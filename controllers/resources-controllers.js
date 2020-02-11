@@ -14,28 +14,30 @@ const getResources = async (req, res) => {
         // Now to fix all other looping queries..
         if (filter === 'none') {
             resources = await db.query(
-                `SELECT u.username, u.profile_pic, u.u_id,
-            r.votes, r.title, r.r_id, r.link, r.published_date,
-            c.tags, c.colors FROM resources r
-            JOIN users u ON r.author = u.u_id
-            JOIN (
-            SELECT c.r_id, array_agg(t.title) AS tags, array_agg(t.color) AS colors
-            FROM tagconnections c
-            JOIN tags t ON t.tag_id = c.tag_id
-            GROUP BY c.r_id) c using (r_id) LIMIT $1`,
-                [Number(pagination) * 20]);
+                `SELECT vc.vote, u.username, u.profile_pic, u.u_id,
+                r.votes, r.title, r.r_id, r.link, r.published_date,
+                c.tags, c.colors FROM resources r
+                JOIN users u ON r.author = u.u_id
+                JOIN (
+                SELECT c.r_id, array_agg(t.title) AS tags, array_agg(t.color) AS colors
+                FROM tagconnections c
+                JOIN tags t ON t.tag_id = c.tag_id
+                GROUP BY c.r_id) c using (r_id) 
+                LEFT JOIN voteconnections vc ON vc.r_id = r.r_id AND vc.u_id = $1 LIMIT $2`,
+                [userId, Number(pagination) * 20]);
         } else {
             resources = await db.query(
-                `SELECT u.username, u.profile_pic, u.u_id, 
-            r.votes, r.title, r.r_id, r.link, r.published_date, 
-            c.tags, c.colors FROM resources r 
-            JOIN users u ON r.author = u.u_id 
-            JOIN (
-            SELECT c.r_id, array_agg(t.title) AS tags, array_agg(t.color) AS colors 
-            FROM tagconnections c 
-            JOIN tags t ON t.tag_id = c.tag_id 
-            GROUP BY c.r_id) c using (r_id) WHERE $1 = ANY (tags) LIMIT $2`,
-                [filter, pagination * 20]);
+                `SELECT vc.vote, u.username, u.profile_pic, u.u_id, 
+                r.votes, r.title, r.r_id, r.link, r.published_date, 
+                c.tags, c.colors FROM resources r 
+                JOIN users u ON r.author = u.u_id 
+                JOIN (
+                SELECT c.r_id, array_agg(t.title) AS tags, array_agg(t.color) AS colors 
+                FROM tagconnections c 
+                JOIN tags t ON t.tag_id = c.tag_id 
+                GROUP BY c.r_id) c using (r_id) WHERE $1 = ANY (tags) 
+                LEFT JOIN voteconnections vc ON vc.r_id = r.r_id AND vc.u_id = $2 LIMIT $3`,
+                [filter, userId, pagination * 20]);
         }
 
         resources = resources.rows.map(r => {return ({...r, owner: Number(r.u_id) === Number(userId)}) })
@@ -252,13 +254,13 @@ const updateResource = async (req, res) => {
 
 const voteResource = async (req, res) => {
 
-    const { vote, resourceId } = req.body;
+    let { vote, resourceId } = req.body;
     const userId = req.decoded.u_id;
     let voteTarget;
     try {
         voteTarget = await db.query(
-            `SELECT title, votes, r_id 
-            FROM resource WHERE r_id = $1`,
+            `SELECT r.title, r.votes, r.r_id, c.vote, c.u_id
+            FROM resources r JOIN voteconnections c ON r.r_id = c.r_id WHERE r.r_id = $1`,
             [resourceId]);
         voteTarget = voteTarget.rows[0];
     } catch(e) {
@@ -272,14 +274,54 @@ const voteResource = async (req, res) => {
     
         try{
             await client.query('BEGIN');
+            if (!!voteTarget) {
+                switch (vote) {
+                    case(0):
+                        vote = -voteTarget.vote;
+                        await client.query(
+                            `DELETE FROM voteconnections 
+                            WHERE r_id = $1 AND u_id = $2`,
+                            [resourceId, userId]
+                        );
+                        break;
+                    case(1):
+                        vote = 2;
+                        await client.query(
+                            `UPDATE voteconnections 
+                            SET vote = 1 
+                            WHERE r_id = $1 AND u_id = $2`,
+                            [resourceId, userId]
+                        );
+                        break;
+                    case(-1):
+                        vote = -2;
+                        await client.query(
+                            `UPDATE voteconnections 
+                            SET vote = -1 
+                            WHERE r_id = $1 AND u_id = $2`,
+                            [resourceId, userId]
+                        );
+                        break;
+                    default:
+                        errorLogger.error('Failed to vote resource: Invalid vote input');
+                        return res.status(500).json(
+                            {
+                                success: false,
+                                status: 'error',
+                                message: 'Failed to vote resource.'
+                            }
+                        )
+                }
+            } else {
+                await client.query(
+                    `INSERT INTO 
+                    voteconnections (r_id, u_id, vote) 
+                    VALUES ($1, $2, $3)`,
+                    [resourceId, userId, vote]);
+            }
             await client.query(
-                `INSERT INTO 
-                voteconnections (r_id, u_id, vote) 
-                VALUES ($1, $2, $3`,
-                [resourceId, userId, vote]);
-            await client.query(
-                'UPDATE resources SET votes = $1 WHERE r_id = $2',
-                [voteTarget.votes + vote, resourceId]);
+                'UPDATE resources SET votes = votes + $1 WHERE r_id = $2',
+                [vote, resourceId]);
             await client.query('COMMIT');
         } catch (e) {
             await client.query('ROLLBACK');
@@ -293,6 +335,36 @@ const voteResource = async (req, res) => {
             client.release();
         }
         res.json({success: true});
+};
+
+const removeVote = async (req, res) => {
+    const userId = req.decoded.u_id;
+    const { vote, resourceId } = req.body;
+
+    const client = await db.connect();
+
+        try{
+            await client.query('BEGIN');
+            await client.query('DELETE FROM voteconnections WHERE u_id = $1 AND r_id = $2',
+                [userId, resourceId]);
+            let votes = await client.query(
+                'UPDATE resources SET votes = votes + $1 ' +
+                'WHERE r_id = $2 RETURNING votes',
+                [vote, resourceId]);
+            console.log(votes.rows[0]);
+            await client.query('COMMIT');
+        } catch (e) {
+            await client.query('ROLLBACK');
+            errorLogger.error('Failed to remove vote on resource: ' + e);
+            return res.status().json({
+                success: false,
+                status: 'error',
+                message: 'Failed to remove vote on resource.'
+            })
+        } finally {
+            client.release();
+        }
+    res.json({success: true});
 };
 
 exports.getResources = getResources;
@@ -310,3 +382,5 @@ exports.searchTags = searchTags;
 exports.updateResource = updateResource;
 
 exports.voteResource = voteResource;
+
+exports.removeVote = removeVote;

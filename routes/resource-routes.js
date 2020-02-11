@@ -43,4 +43,9 @@ router.put(
     resourceController.updateResource
 );
 
+router.put(
+    '/remove_vote',
+    resourceController.removeVote
+);
+
 module.exports = router;
