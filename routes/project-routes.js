@@ -38,6 +38,16 @@ router.get(
 
 router.post(
     '/boards/tasks/add_user',
+    [
+        check('userId')
+            .not()
+            .isEmpty()
+            .isNumeric(),
+        check('taskId')
+            .not()
+            .isEmpty()
+            .isNumeric(),
+    ],
     projectControllers.addCollaboratorToTask
 );
 
@@ -49,6 +59,20 @@ router.get(
 router.put(
     '/boards/update_task',
     projectControllers.updateTask
+);
+
+router.put(
+    '/boards/update_column_title',
+    [
+        check('title')
+            .not()
+            .isEmpty(),
+        check('columnId')
+            .not()
+            .isEmpty()
+            .isNumeric(),
+    ],
+    projectControllers.updateColumnTitle
 );
 
 module.exports = router;
