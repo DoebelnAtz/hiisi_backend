@@ -255,12 +255,12 @@ const deleteResource = async (req, res) => {
 
 const searchTags = async (req, res) => {
 	const query = req.query.q;
-
+	let limit = req.query.limit;
 	let tags;
 	try {
 		tags = await db.query(
-			'SELECT * FROM tags WHERE title LIKE $1 LIMIT 10',
-			[query + '%'],
+			'SELECT * FROM tags WHERE title LIKE $1 LIMIT $2',
+			[query + '%', limit],
 		);
 		tags = tags.rows;
 	} catch (e) {
