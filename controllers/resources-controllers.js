@@ -6,8 +6,21 @@ const { errorLogger, accessLogger } = require('../logger');
 const getResources = async (req, res) => {
 	const userId = req.decoded.u_id;
 
-	const pagination = req.query.page;
+	const page = req.query.page;
 	const filter = req.query.filter;
+	const order = req.query.order;
+	// we are dangerously inserting values into a query so we need to make sure that
+	// the order parameter is correct
+	if (order !== 'popular' && order !== 'recent') {
+		errorLogger.error('Failed to get resources: invalid order parameter');
+		return res.status(422).json({
+			status: 'error',
+			message: 'Failed to get resources',
+		});
+	}
+	let order1 = order === 'popular' ? 'r.votes' : 'r.published_date';
+	let order2 = order === 'recent' ? 'r.published_date' : 'r.votes';
+	console.log(order1, order2, order);
 	let resources;
 	try {
 		// This is not a nice query, couldn't figure out how to do it
@@ -19,13 +32,14 @@ const getResources = async (req, res) => {
                 r.votes, r.title, r.r_id, r.link, r.published_date,
                 c.tags, c.colors FROM resources r
                 JOIN users u ON r.author = u.u_id
-                JOIN (
+                LEFT JOIN (
                 SELECT c.r_id, array_agg(t.title) AS tags, array_agg(t.color) AS colors
                 FROM tagconnections c
                 JOIN tags t ON t.tag_id = c.tag_id
                 GROUP BY c.r_id) c using (r_id) 
-                LEFT JOIN voteconnections vc ON vc.r_id = r.r_id AND vc.u_id = $1 LIMIT $2`,
-				[userId, Number(pagination) * 20],
+                LEFT JOIN voteconnections vc ON vc.r_id = r.r_id AND vc.u_id = $1 
+                ORDER BY ${order1} DESC, ${order2} DESC LIMIT $2`,
+				[userId, Number(page) * 20],
 			);
 		} else {
 			resources = await db.query(
@@ -38,8 +52,9 @@ const getResources = async (req, res) => {
                 FROM tagconnections c 
                 JOIN tags t ON t.tag_id = c.tag_id 
                 GROUP BY c.r_id) c using (r_id) 
-                LEFT JOIN voteconnections vc ON vc.r_id = r.r_id AND vc.u_id = $2 WHERE $1 = ANY (tags)  LIMIT $3`,
-				[filter, userId, pagination * 20],
+                LEFT JOIN voteconnections vc ON vc.r_id = r.r_id AND vc.u_id = $2 WHERE $1 = ANY (tags) 
+                ORDER BY ${order1} DESC, ${order2} DESC LIMIT $3`,
+				[filter, userId, page * 20],
 			);
 		}
 
