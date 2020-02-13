@@ -11,16 +11,29 @@ const getResources = async (req, res) => {
 	const order = req.query.order;
 	// we are dangerously inserting values into a query so we need to make sure that
 	// the order parameter is correct
-	if (order !== 'popular' && order !== 'recent') {
+	if (order !== 'popular' && order !== 'recent' && order !== 'title') {
 		errorLogger.error('Failed to get resources: invalid order parameter');
 		return res.status(422).json({
 			status: 'error',
 			message: 'Failed to get resources',
 		});
 	}
-	let order1 = order === 'popular' ? 'r.votes' : 'r.published_date';
-	let order2 = order === 'recent' ? 'r.published_date' : 'r.votes';
-	console.log(order1, order2, order);
+	let order1;
+	let order2;
+	switch (order) {
+		case 'popular':
+			order1 = 'r.votes DESC';
+			order2 = 'r.published_date DESC';
+			break;
+		case 'recent':
+			order1 = 'r.published_date DESC';
+			order2 = 'r.votes DESC';
+			break;
+		default:
+			order1 = 'r.title ASC';
+			order2 = 'r.published_date DESC';
+	}
+
 	let resources;
 	try {
 		// This is not a nice query, couldn't figure out how to do it
@@ -38,7 +51,7 @@ const getResources = async (req, res) => {
                 JOIN tags t ON t.tag_id = c.tag_id
                 GROUP BY c.r_id) c using (r_id) 
                 LEFT JOIN voteconnections vc ON vc.r_id = r.r_id AND vc.u_id = $1 
-                ORDER BY ${order1} DESC, ${order2} DESC LIMIT $2`,
+                ORDER BY ${order1}, ${order2} LIMIT $2`,
 				[userId, Number(page) * 20],
 			);
 		} else {
@@ -53,7 +66,7 @@ const getResources = async (req, res) => {
                 JOIN tags t ON t.tag_id = c.tag_id 
                 GROUP BY c.r_id) c using (r_id) 
                 LEFT JOIN voteconnections vc ON vc.r_id = r.r_id AND vc.u_id = $2 WHERE $1 = ANY (tags) 
-                ORDER BY ${order1} DESC, ${order2} DESC LIMIT $3`,
+                ORDER BY ${order1}, ${order2} LIMIT $3`,
 				[filter, userId, page * 20],
 			);
 		}
@@ -259,7 +272,7 @@ const searchTags = async (req, res) => {
 	let tags;
 	try {
 		tags = await db.query(
-			'SELECT * FROM tags WHERE title LIKE $1 LIMIT $2',
+			'SELECT * FROM tags WHERE title LIKE $1 ORDER BY title ASC LIMIT $2',
 			[query + '%', limit],
 		);
 		tags = tags.rows;
