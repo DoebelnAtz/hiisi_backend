@@ -150,6 +150,7 @@ const getBoardById = async (req, res) => {
 					title: board[i].task_title,
 					task_id: board[i].task_id,
 					priority: board[i].priority,
+					description: board[i].description,
 					collaborators: [],
 				});
 			}
