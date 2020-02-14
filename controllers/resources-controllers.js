@@ -91,6 +91,31 @@ const getResources = async (req, res) => {
 	res.json(resources);
 };
 
+const deleteTagFromResource = async (req, res) => {
+	const errors = validationResult(req);
+	if (!errors.isEmpty()) {
+		return res.status(422).json({
+			status: 'error',
+			message: 'Invalid input please try again.',
+		});
+	}
+	const { tagId, rId } = req.body;
+	try {
+		await db.query(
+			`DELETE from tagconnections WHERE tag_id = $1 
+			AND r_id = $2`,
+			[tagId, rId],
+		);
+	} catch (e) {
+		errorLogger.error('Failed to delete tag from resource: ' + e);
+		return res.status(500).json({
+			status: 'error',
+			message: 'Failed to delete tag from resource',
+		});
+	}
+	res.json({ success: true });
+};
+
 const addTagToResource = async (req, res) => {
 	const errors = validationResult(req);
 	if (!errors.isEmpty()) {
@@ -430,6 +455,8 @@ exports.getResourceById = getResourceById;
 exports.addResource = addResource;
 
 exports.deleteResource = deleteResource;
+
+exports.deleteTagFromResource = deleteTagFromResource;
 
 exports.addTagToResource = addTagToResource;
 

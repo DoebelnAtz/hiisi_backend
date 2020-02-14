@@ -62,6 +62,95 @@ const addTaskToBoard = async (req, res) => {
 	res.status(201).json({ ...createdTask, collaborators: collaborators });
 };
 
+const createProject = async (req, res) => {
+	const errors = validationResult(req);
+	if (!errors.isEmpty()) {
+		return res.status(422).json({
+			status: 'error',
+			message: 'Invalid input please try again.',
+		});
+	}
+	const userId = req.decoded.u_id;
+	const { title, link, description } = req.body;
+
+	let createdProject;
+	const client = await db.connect();
+	try {
+		await client.query('BEGIN');
+		let commentthread = await client.query(
+			`INSERT INTO commentthreads DEFAULT VALUES 
+			RETURNING t_id`,
+		);
+		commentthread = commentthread.rows[0];
+		let chatthread = await client.query(
+			`INSERT INTO threads (thread_name) VALUES ($1) 
+			RETURNING t_id`,
+			[title],
+		);
+		chatthread = chatthread.rows[0];
+		createdProject = await client.query(
+			`INSERT INTO projects 
+			(title, description, link, t_id, commentthread) 
+			VALUES ($1, $2, $3, $4, $5) RETURNING *`,
+			[title, description, link, chatthread.t_id, commentthread.t_id],
+		);
+		createdProject = createdProject.rows[0];
+		let board = await client.query(
+			`INSERT INTO boards (title, project_id) 
+			VALUES ($1, $2) RETURNING board_id`,
+			[title, createdProject.project_id],
+		);
+		board = board.rows[0];
+		let boardTitles = [
+			'Backlog',
+			'Breakdown',
+			'In Development',
+			'Testing',
+			'Implementing',
+		];
+
+		for (var i = 0; i < 5; i++) {
+			let column = await client.query(
+				`INSERT INTO boardcolumns 
+				(board_id, title) VALUES 
+				($1, $2)`,
+				[board.board_id, boardTitles[i]],
+			);
+		}
+		await client.query(
+			`INSERT INTO projectcollaborators 
+			(u_id, project_id) VALUES ($1, $2) RETURNING
+			project_id, u_id`,
+			[userId, createdProject.project_id],
+		);
+		await client.query(
+			`INSERT INTO threadconnections 
+			(user_id, thread_id) VALUES ($1, $2)`,
+			[userId, chatthread.t_id],
+		);
+		let collaborators = await client.query(
+			`SELECT u.username, u.profile_pic, u.u_id
+			FROM users u JOIN projectcollaborators c ON c.u_id = u.u_id 
+			WHERE c.project_id = $1`,
+			[createdProject.project_id],
+		);
+		collaborators = collaborators.rows;
+		createdProject = { ...createdProject, collaborators: collaborators };
+		await client.query('COMMIT');
+	} catch (e) {
+		await client.query('ROLLBACK');
+		errorLogger.error('Failed to create project: ' + e);
+		return res.status(500).json({
+			success: false,
+			status: 'error',
+			message: 'Failed to create project.',
+		});
+	} finally {
+		client.release();
+	}
+	res.json(createdProject);
+};
+
 const addCollaboratorToTask = async (req, res) => {
 	const errors = validationResult(req);
 	if (!errors.isEmpty()) {
@@ -150,7 +239,6 @@ const getBoardById = async (req, res) => {
 					title: board[i].task_title,
 					task_id: board[i].task_id,
 					priority: board[i].priority,
-					description: board[i].description,
 					collaborators: [],
 				});
 			}
@@ -219,7 +307,8 @@ const getProjectById = async (req, res) => {
 	let project;
 	try {
 		project = await db.query(
-			'SELECT p.title, p.commentthread, b.board_id, p.project_id, p.votes, p.t_id ' +
+			'SELECT p.title, p.commentthread, ' +
+				'b.board_id, p.project_id, p.votes, p.t_id, p.description, p.link ' +
 				'FROM projects p JOIN boards b ' +
 				'ON b.project_id = p.project_id AND p.project_id = $1',
 			[projectId],
@@ -282,6 +371,24 @@ const updateColumnTitle = async (req, res) => {
 		});
 	}
 	res.json({ title: newTitle.title });
+};
+
+const updateTaskPosition = async (req, res) => {
+	const updatedTask = req.body;
+	try {
+		await db.query('UPDATE tasks SET column_id = $1 WHERE task_id = $2', [
+			updatedTask.column_id,
+			updatedTask.task_id,
+		]);
+	} catch (e) {
+		errorLogger.error('Failed to update task: ' + e);
+		return res.status(500).json({
+			success: false,
+			status: 'error',
+			message: 'Failed to update task',
+		});
+	}
+	res.json({ success: true });
 };
 
 const updateTask = async (req, res) => {
@@ -377,6 +484,8 @@ const saveBoardState = async (req, res) => {
 
 exports.addTaskToBoard = addTaskToBoard;
 exports.updateTask = updateTask;
+exports.createProject = createProject;
+exports.updateTaskPosition = updateTaskPosition;
 exports.getBoardById = getBoardById;
 exports.getProjects = getProjects;
 exports.getProjectById = getProjectById;
