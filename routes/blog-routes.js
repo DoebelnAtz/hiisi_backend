@@ -7,62 +7,55 @@ const router = express.Router();
 
 // We can get posts by POST or GET, POST method can include senderId to check if sender has liked a post
 
-router.get(
-    '/',
-    blogsController.getBlogs
-);
+router.get('/', blogsController.getBlogs);
 
-router.get(
-    '/:bid',
-    blogsController.getBlogById
-);
+router.get('/:bid', blogsController.getBlogById);
 
-router.get(
-    '/users/:uid',
-    blogsController.getBlogsByUserId
-);
+router.get('/users/:uid', blogsController.getBlogsByUserId);
 
 // Same as blogs, we can get comment threads by POST or GET to check likes,
 
-router.get(
-    '/commentthread/:tid',
-    commentController.getCommentThreadById
+router.get('/commentthread/:tid', commentController.getCommentThreadById);
+
+router.post(
+	'/create_blog',
+	[
+		check('title')
+			.not()
+			.isEmpty(),
+		check('content')
+			.not()
+			.isEmpty(),
+	],
+	blogsController.createBlog,
 );
 
 router.post(
-    '/create_blog',
-    [
-        check('title')
-            .not()
-            .isEmpty(),
-        check('content')
-            .not()
-            .isEmpty(),
-    ],
-    blogsController.createBlog
-);
-//
-router.post(
-    '/create_comment',
-    [
-        check('threadId')
-            .not()
-            .isEmpty(),
-        check('content')
-            .not()
-            .isEmpty(),
-    ],
-    commentController.createComment
+	'/vote_blog',
+	[
+		check('blogId')
+			.not()
+			.isEmpty()
+			.isNumeric(),
+		check('vote')
+			.not()
+			.isEmpty()
+			.isNumeric(),
+	],
+	blogsController.voteBlog,
 );
 
 router.post(
-    '/like_post',
-    [
-        check('blogId')
-            .not()
-            .isEmpty(),
-    ],
-    blogsController.likeBlog
+	'/create_comment',
+	[
+		check('threadId')
+			.not()
+			.isEmpty(),
+		check('content')
+			.not()
+			.isEmpty(),
+	],
+	commentController.createComment,
 );
 
 module.exports = router;

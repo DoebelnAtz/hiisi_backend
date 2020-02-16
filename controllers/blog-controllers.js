@@ -20,13 +20,13 @@ const getBlogs = async (req, res) => {
 	switch (order) {
 		case 'popular':
 			reverseOrder = reverse === 'true' ? 'ASC' : 'DESC';
-			order1 = `likes ${reverseOrder}`;
+			order1 = `votes ${reverseOrder}`;
 			order2 = 'published_date DESC';
 			break;
 		case 'recent':
 			reverseOrder = reverse === 'true' ? 'ASC' : 'DESC';
 			order1 = `published_date ${reverseOrder}`;
-			order2 = 'likes DESC';
+			order2 = 'votes DESC';
 			break;
 		default:
 			reverseOrder = reverse === 'true' ? 'DESC' : 'ASC';
@@ -35,13 +35,13 @@ const getBlogs = async (req, res) => {
 	}
 	try {
 		sender = await db.query(
-			`SELECT blog_id FROM users 
-            JOIN likedposts ON likedposts.user_id = $1`,
+			`SELECT b_id, vote FROM users 
+            JOIN likedposts ON likedposts.u_id = $1`,
 			[senderId],
 		);
-		sender = sender.rows.map((row) => row.blog_id);
+		sender = sender.rows.map((row) => row.b_id);
 	} catch (e) {
-		console.log(e);
+		errorLogger.error('Failed to get blogs: ' + e);
 		return res.status(500).json({
 			status: 'error',
 			message: 'Failed to get blogs',
@@ -51,28 +51,24 @@ const getBlogs = async (req, res) => {
 	let blogs;
 	try {
 		blogs = await db.query(
-			`SELECT b_id, content, title, 
-            published_date, commentthread, likes, u_id, username 
-            FROM blogs JOIN users 
-            ON blogs.author = users.u_id 
+			`SELECT b.b_id, b.content, b.title, l.vote AS voted,
+            b.published_date, b.commentthread, votes, u.u_id, u.username 
+            FROM blogs b JOIN users u
+            ON b.author = u.u_id 
+            LEFT JOIN likedposts l 
+            ON l.b_id = b.b_id 
             ORDER BY ${order1}, ${order2}`,
 		);
 		blogs = blogs.rows;
+		blogs.map((blog) => (blog.owner = blog.u_id === senderId));
 	} catch (e) {
-		console.log(e);
+		errorLogger.error('Failed to get blogs: ' + e);
 		return res.status(500).json({
 			status: 'error',
 			message: 'Failed to get blogs',
 		});
 	}
-	res.json(
-		blogs.map((blog) => {
-			return {
-				...blog,
-				liked: sender ? sender.includes(blog.b_id) : false,
-			};
-		}),
-	);
+	res.json(blogs);
 };
 
 const getBlogById = async (req, res) => {
@@ -80,8 +76,15 @@ const getBlogById = async (req, res) => {
 
 	let blog;
 	try {
-		blog = await db.query('SELECT * FROM blogs WHERE b_id = $1', [blogId]);
+		blog = await db.query(
+			`SELECT b.title, b.content, 
+			b.b_id, b.commentthread, b.published_date, 
+			u.username, u.u_id, u.profile_pic
+			FROM blogs b JOIN users u ON u.u_id = author WHERE b_id = $1`,
+			[blogId],
+		);
 		blog = blog.rows[0];
+		blog.owner = blog.u_id = req.decoded.u_id;
 	} catch (e) {
 		return res.status(500).json({
 			status: 'error',
@@ -89,7 +92,7 @@ const getBlogById = async (req, res) => {
 		});
 	}
 
-	res.json({ blog: blog });
+	res.json(blog);
 };
 
 const getBlogsByUserId = async (req, res) => {
@@ -156,7 +159,7 @@ const createBlog = async (req, res) => {
 		createdBlog = await client.query(
 			'INSERT INTO blogs(title, content, author, commentthread, published_date) ' +
 				'VALUES($1, $2, $3, $4, $5) ' +
-				'RETURNING b_id, title, content, author, commentthread, likes, published_date',
+				'RETURNING b_id, title, content, author, commentthread, votes, published_date',
 			[title, content, authorId, res.t_id, published_date],
 		);
 		await client.query('COMMIT');
@@ -174,41 +177,95 @@ const createBlog = async (req, res) => {
 	res.status(201).json(createdBlog.rows[0]);
 };
 
-const likeBlog = async (req, res) => {
+const voteBlog = async (req, res) => {
 	const errors = validationResult(req);
 	if (!errors.isEmpty()) {
-		return res.status(400).json({
+		return res.status(422).json({
 			status: 'error',
 			message: 'Invalid input please try again.',
 		});
 	}
+	let { vote, blogId } = req.body;
 	const userId = req.decoded.u_id;
-	const { blogId } = req.body;
-
+	let voteTarget;
+	try {
+		voteTarget = await db.query(
+			`SELECT b.title, b.votes, b.b_id, l.vote, l.u_id
+            FROM blogs b JOIN likedposts l ON b.b_id = l.b_id 
+            WHERE b.b_id = $1`,
+			[blogId],
+		);
+		voteTarget = voteTarget.rows[0];
+	} catch (e) {
+		errorLogger.error('Failed to find target blog for voting: ' + e);
+		return res.status(500).json({
+			status: 'error',
+			message: 'Failed to find target blog for voting',
+		});
+	}
 	const client = await db.connect();
 
 	try {
 		await client.query('BEGIN');
-
+		if (!!voteTarget) {
+			switch (vote) {
+				case 0:
+					vote = -voteTarget.vote;
+					await client.query(
+						`DELETE FROM likedposts l 
+                            WHERE l.b_id = $1 AND l.u_id = $2`,
+						[blogId, userId],
+					);
+					break;
+				case 1:
+					vote = 2;
+					await client.query(
+						`UPDATE likedposts
+                            SET vote = 1 
+                            WHERE b_id = $1 AND u_id = $2`,
+						[blogId, userId],
+					);
+					break;
+				case -1:
+					vote = -2;
+					await client.query(
+						`UPDATE likedposts
+                            SET vote = -1 
+                            WHERE b_id = $1 AND u_id = $2`,
+						[blogId, userId],
+					);
+					break;
+				default:
+					errorLogger.error(
+						'Failed to vote resource: Invalid vote input',
+					);
+					return res.status(500).json({
+						success: false,
+						status: 'error',
+						message: 'Failed to vote resource.',
+					});
+			}
+		} else {
+			await client.query(
+				`INSERT INTO 
+                    likedposts (b_id, u_id, vote) 
+                    VALUES ($1, $2, $3)`,
+				[blogId, userId, vote],
+			);
+		}
 		await client.query(
-			'UPDATE blogs SET likes = likes + 1 WHERE b_id = $1',
-			[blogId],
+			`UPDATE blogs 
+			SET votes = votes + $1 WHERE b_id = $2`,
+			[vote, blogId],
 		);
-
-		await client.query(
-			'INSERT INTO likedposts (user_id, blog_id) ' + 'VALUES ($1, $2)',
-			[userId, blogId],
-		);
-
 		await client.query('COMMIT');
 	} catch (e) {
 		await client.query('ROLLBACK');
-		return res.status(200).json({
-			//since there is a possibility it fails because user
-			// already liked a post we send back an ok response anyway prob bad practice, improve later..
+		errorLogger.error('Failed to vote blog: ' + e);
+		return res.status(500).json({
 			success: false,
 			status: 'error',
-			message: 'Failed to like blog post.',
+			message: 'Failed to vote blog.',
 		});
 	} finally {
 		client.release();
@@ -216,8 +273,12 @@ const likeBlog = async (req, res) => {
 	res.json({ success: true });
 };
 
+const deleteBlog = async (req, res) => {
+	//TODO
+};
+
 exports.getBlogs = getBlogs;
 exports.getBlogById = getBlogById;
 exports.getBlogsByUserId = getBlogsByUserId;
 exports.createBlog = createBlog;
-exports.likeBlog = likeBlog;
+exports.voteBlog = voteBlog;
