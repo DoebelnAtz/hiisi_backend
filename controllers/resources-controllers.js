@@ -56,8 +56,8 @@ const getResources = async (req, res) => {
                 JOIN tags t ON t.tag_id = c.tag_id
                 GROUP BY c.r_id) c using (r_id) 
                 LEFT JOIN voteconnections vc ON vc.r_id = r.r_id AND vc.u_id = $1 
-                ORDER BY ${order1}, ${order2} LIMIT $2`,
-				[userId, Number(page) * 10],
+                ORDER BY ${order1}, ${order2} LIMIT $2 OFFSET $3`,
+				[userId, Number(page) * 10, Number(page - 1) * 10],
 			);
 		} else {
 			resources = await db.query(
@@ -72,8 +72,8 @@ const getResources = async (req, res) => {
                 GROUP BY c.r_id) c using (r_id) 
                 LEFT JOIN voteconnections vc ON vc.r_id = r.r_id 
                 AND vc.u_id = $2 WHERE $1 = ANY (tags) 
-                ORDER BY ${order1}, ${order2} LIMIT $3`,
-				[filter, userId, page * 10],
+                ORDER BY ${order1}, ${order2} LIMIT $3 OFFSET $4`,
+				[filter, userId, Number(page) * 10, Number(page - 1) * 10],
 			);
 		}
 

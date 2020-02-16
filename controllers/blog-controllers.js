@@ -6,6 +6,7 @@ const getBlogs = async (req, res) => {
 	let sender;
 	const senderId = req.decoded.u_id; // get sender id from decoded token
 	let order = req.query.order;
+	let pagination = req.query.page;
 	let reverse = req.query.reverse;
 	if (order !== 'popular' && order !== 'recent' && order !== 'title') {
 		errorLogger.error('Failed to get blogs: invalid order parameter');
@@ -57,7 +58,8 @@ const getBlogs = async (req, res) => {
             ON b.author = u.u_id 
             LEFT JOIN likedposts l 
             ON l.b_id = b.b_id 
-            ORDER BY ${order1}, ${order2}`,
+            ORDER BY ${order1}, ${order2} LIMIT $1 OFFSET $2`,
+			[Number(pagination) * 10, Number(pagination - 1) * 10],
 		);
 		blogs = blogs.rows;
 		blogs.map((blog) => (blog.owner = blog.u_id === senderId));
