@@ -265,13 +265,47 @@ const getBoardById = async (req, res) => {
 };
 
 const getProjects = async (req, res) => {
+	const page = req.query.page;
+	const filter = req.query.filter;
+	const order = req.query.order;
+	const reverse = req.query.reverse;
+	// we are dangerously inserting values into a query so we need to make sure that
+	// the order parameter is correct
+	if (order !== 'popular' && order !== 'recent' && order !== 'title') {
+		errorLogger.error('Failed to get resources: invalid order parameter');
+		return res.status(422).json({
+			status: 'error',
+			message: 'Failed to get resources',
+		});
+	}
+	let order1;
+	let order2;
+	let reverseOrder;
+	switch (order) {
+		case 'popular':
+			reverseOrder = reverse === 'true' ? 'ASC' : 'DESC';
+			order1 = `p.votes ${reverseOrder}`;
+			order2 = 'p.published_date DESC';
+			break;
+		case 'recent':
+			reverseOrder = reverse === 'true' ? 'ASC' : 'DESC';
+			order1 = `p.published_date ${reverseOrder}`;
+			order2 = 'p.votes DESC';
+			break;
+		default:
+			reverseOrder = reverse === 'true' ? 'DESC' : 'ASC';
+			order1 = `p.title ${reverseOrder}`;
+			order2 = 'p.published_date DESC';
+	}
+
 	let projects;
 	try {
 		projects = await db.query(
 			`SELECT p.title, p.published_date, 
 			p.votes, p.project_id, v.vote 
 			FROM projects p LEFT JOIN projectvotes v 
-			ON v.project_id = p.project_id ORDER BY p.votes DESC`,
+			ON v.project_id = p.project_id ORDER BY ${order1}, ${order2} LIMIT $1 OFFSET $2`,
+			[Number(page) * 10, Number(page - 1) * 10],
 		);
 		projects = projects.rows;
 	} catch (e) {
