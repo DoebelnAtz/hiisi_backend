@@ -268,7 +268,10 @@ const getProjects = async (req, res) => {
 	let projects;
 	try {
 		projects = await db.query(
-			'SELECT p.title, p.created_date, p.votes, p.project_id FROM projects p',
+			`SELECT p.title, p.published_date, 
+			p.votes, p.project_id, v.vote 
+			FROM projects p LEFT JOIN projectvotes v 
+			ON v.project_id = p.project_id ORDER BY p.votes DESC`,
 		);
 		projects = projects.rows;
 	} catch (e) {
@@ -308,7 +311,7 @@ const getProjectById = async (req, res) => {
 	try {
 		project = await db.query(
 			'SELECT p.title, p.commentthread, ' +
-				'b.board_id, p.project_id, p.votes, p.t_id, p.description, p.link ' +
+				'b.board_id, p.project_id, p.votes, p.t_id, p.description, p.link, p.published_date ' +
 				'FROM projects p JOIN boards b ' +
 				'ON b.project_id = p.project_id AND p.project_id = $1',
 			[projectId],
@@ -343,6 +346,100 @@ const getProjectById = async (req, res) => {
 	}
 
 	res.json({ ...project, contributor, collaborators });
+};
+
+const voteProject = async (req, res) => {
+	const errors = validationResult(req);
+	if (!errors.isEmpty()) {
+		return res.status(422).json({
+			status: 'error',
+			message: 'Invalid input please try again.',
+		});
+	}
+	let { vote, projectId } = req.body;
+	const userId = req.decoded.u_id;
+	let voteTarget;
+	try {
+		voteTarget = await db.query(
+			`SELECT p.title, p.votes, p.project_id, v.vote, v.u_id
+            FROM projects p JOIN projectvotes v ON v.project_id = p.project_id WHERE p.project_id = $1`,
+			[projectId],
+		);
+		voteTarget = voteTarget.rows[0];
+	} catch (e) {
+		errorLogger.error('Failed to find target project for voting: ' + e);
+		return res.status(500).json({
+			status: 'error',
+			message: 'Failed to find target project for voting',
+		});
+	}
+	const client = await db.connect();
+
+	try {
+		await client.query('BEGIN');
+		if (!!voteTarget) {
+			switch (vote) {
+				case 0:
+					vote = -voteTarget.vote;
+					await client.query(
+						`DELETE FROM projectvotes 
+                            WHERE project_id = $1 AND u_id = $2`,
+						[projectId, userId],
+					);
+					break;
+				case 1:
+					vote = 2;
+					await client.query(
+						`UPDATE projectvotes 
+                            SET vote = 1 
+                            WHERE project_id = $1 AND u_id = $2`,
+						[projectId, userId],
+					);
+					break;
+				case -1:
+					vote = -2;
+					await client.query(
+						`UPDATE projectvotes 
+                            SET vote = -1 
+                            WHERE project_id = $1 AND u_id = $2`,
+						[projectId, userId],
+					);
+					break;
+				default:
+					errorLogger.error(
+						'Failed to vote resource: Invalid vote input',
+					);
+					return res.status(500).json({
+						success: false,
+						status: 'error',
+						message: 'Failed to vote resource.',
+					});
+			}
+		} else {
+			await client.query(
+				`INSERT INTO 
+                    projectvotes (project_id, u_id, vote) 
+                    VALUES ($1, $2, $3)`,
+				[projectId, userId, vote],
+			);
+		}
+		await client.query(
+			'UPDATE projects SET votes = votes + $1 WHERE project_id = $2',
+			[vote, projectId],
+		);
+		await client.query('COMMIT');
+	} catch (e) {
+		await client.query('ROLLBACK');
+		errorLogger.error('Failed to vote resource: ' + e);
+		return res.status(500).json({
+			success: false,
+			status: 'error',
+			message: 'Failed to vote resource.',
+		});
+	} finally {
+		client.release();
+	}
+	res.json({ success: true });
 };
 
 const updateColumnTitle = async (req, res) => {
@@ -491,5 +588,6 @@ exports.getProjects = getProjects;
 exports.getProjectById = getProjectById;
 exports.saveBoardState = saveBoardState;
 exports.getTaskById = getTaskById;
+exports.voteProject = voteProject;
 exports.addCollaboratorToTask = addCollaboratorToTask;
 exports.updateColumnTitle = updateColumnTitle;

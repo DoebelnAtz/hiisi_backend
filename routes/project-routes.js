@@ -22,6 +22,21 @@ router.post('/boards/save_board', projectControllers.saveBoardState);
 
 router.post('/create_project', projectControllers.createProject);
 
+router.post(
+	'/vote_project',
+	[
+		check('vote')
+			.not()
+			.isEmpty()
+			.isNumeric(),
+		check('projectId')
+			.not()
+			.isEmpty()
+			.isNumeric(),
+	],
+	projectControllers.voteProject,
+);
+
 router.get('/:pid', projectControllers.getProjectById);
 
 router.get('/boards/tasks/:tid', projectControllers.getTaskById);
