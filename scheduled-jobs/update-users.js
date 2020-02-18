@@ -38,8 +38,8 @@ const updateUsers = async () => {
                 ' WHERE u_id = $12',
                 [
                     userinfo.image_url,
-                    userinfo.cursus_users[1].level,
-                    userinfo.cursus_users[1].grade,
+                    userinfo.cursus_users[0].level,
+                    userinfo.cursus_users[0].grade,
                     userinfo.pool_month + ' ' + userinfo.pool_year,
                     userinfo.wallet,
                     userinfo.location,
