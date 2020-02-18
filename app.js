@@ -28,6 +28,7 @@ const projectRotes = require('./routes/project-routes');
 const messageRoutes = require('./routes/message-routes');
 const resourceRoutes = require('./routes/resource-routes');
 const chatController = require('./controllers/chat-controllers');
+const searchRoutes = require('./routes/search-routes');
 
 schedule.scheduleJob('*/30 * * * * ', userJobs.update); // execute job every X minutes, cron-like syntax
 
@@ -42,6 +43,7 @@ app.use('/api/projects', projectRotes);
 app.use('/api/messages', messageRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/blogs', blogRoutes);
+app.use('/api/search', searchRoutes);
 
 io.on('connection', socket => {
     console.log("connected!");

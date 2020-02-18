@@ -1,7 +1,6 @@
 const { validationResult } = require('express-validator');
 const { errorLogger, accessLogger } = require('../logger');
 const db = require('../queries');
-const removeDup = require('../utils/utils').removeDup;
 
 const addTaskToBoard = async (req, res) => {
 	const errors = validationResult(req);
