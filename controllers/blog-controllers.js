@@ -276,7 +276,51 @@ const voteBlog = async (req, res) => {
 };
 
 const deleteBlog = async (req, res) => {
-	//TODO
+	const senderId = req.decoded.u_id;
+
+	const { blogId } = req.body;
+	let blogToDelete;
+	try {
+		blogToDelete = await db.query(`SELECT b_id, commentthread FROM blogs WHERE b_id = $1`, [blogId]);
+		blogToDelete = blogToDelete.rows[0];
+	} catch (e) {
+		errorLogger.error('Failed to find post to delete: ' + e);
+		return res.status(500).json({
+			success: false,
+			status: 'error',
+			message: 'Failed to find post to delete.',
+		})
+	}
+	const client = await db.connect();
+
+	try {
+		await client.query('BEGIN');
+
+		await client.query(
+			`DELETE FROM likedposts WHERE b_id = $1`,
+			[blogId]
+		);
+
+		await client.query(
+			`DELETE FROM blogs WHERE b_id = $1`,
+			 [blogId]
+		);
+		await  client.query(`
+			DELETE FROM commentthreads WHERE t_id = $1`,
+			[blogToDelete.commentthread]);
+		await client.query('COMMIT');
+	} catch (e) {
+		await client.query('ROLLBACK');
+		errorLogger.error('Failed to add task: ' + e);
+		return res.status(500).json({
+			success: false,
+			status: 'error',
+			message: 'Failed to find post to delete.',
+		});
+	} finally {
+		client.release();
+	}
+	res.json({success: true})
 };
 
 exports.getBlogs = getBlogs;
@@ -284,3 +328,4 @@ exports.getBlogById = getBlogById;
 exports.getBlogsByUserId = getBlogsByUserId;
 exports.createBlog = createBlog;
 exports.voteBlog = voteBlog;
+exports.deleteBlog = deleteBlog;

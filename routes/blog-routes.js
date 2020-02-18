@@ -58,4 +58,15 @@ router.post(
 	commentController.createComment,
 );
 
+router.delete(
+	'/delete_blog',
+	[
+		check('blogId')
+			.not()
+			.isEmpty()
+			.isNumeric(),
+	],
+	blogsController.deleteBlog,
+);
+
 module.exports = router;
