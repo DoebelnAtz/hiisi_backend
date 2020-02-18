@@ -53,9 +53,6 @@ io.on('connection', socket => {
         io.to(socket.request.headers.referer).emit('joined-room', socket.body.decoded)
     });
     console.log(socket.body.decoded);
-    socket.join(socket.id, () => {
-        console.log('Joined room: ' + socket.id)
-    });
 
     socket.on('send-message', (message) => {
         console.log(message);
