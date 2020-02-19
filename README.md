@@ -1,7 +1,7 @@
 
 [auth](#/auth)
 
-[blog](#/blog)
+[blog](#blog)
 
 [projects](#/projects)
 
@@ -35,7 +35,7 @@
     required: username, password
 
 
-# /blog
+# blog
 
     GET: /
     
