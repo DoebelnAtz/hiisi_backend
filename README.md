@@ -1,23 +1,23 @@
 
-[auth](#auth)
+[auth](#/auth)
 
-[blog](#blog)
+[blog](#/blog)
 
-[projects](#projects)
+[projects](#/projects)
 
-[users](#users)
+[users](#/users)
 
-[messages](#messages)
+[messages](#/messages)
 
-[resources](#resources)
+[resources](#/resources)
 
-[search](#search)
+[search](#/search)
 
 <h1>Endpoints</h1>
 
 <h1>/api</h1>
 
-#/auth
+# /auth
 
 
     POST: /signup
@@ -35,7 +35,7 @@
     required: username, password
 
 
-#/blog
+# /blog
 
     GET: /
     
@@ -85,7 +85,7 @@
     
     required: blogId
     
-#/projects
+# /projects
 
     
     
@@ -160,7 +160,7 @@
     
     
     
-#/users
+# /users
 
     GET: /
 
@@ -192,7 +192,7 @@
     
     required: search
  
-#/messages
+# /messages
 
     GET: /threads
     
@@ -227,7 +227,7 @@
     required: targetId, threadId
     
     
-#/resources
+# /resources
 
 
     GET: /
@@ -298,7 +298,7 @@
     required: resource object with description, link, title, and r_id fields
     
     
-#/search
+# /search
 
 
     GET: /
