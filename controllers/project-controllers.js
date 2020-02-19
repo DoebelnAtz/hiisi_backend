@@ -265,6 +265,7 @@ const getBoardById = async (req, res) => {
 
 const getProjects = async (req, res) => {
 	const page = req.query.page;
+	const userId = req.decoded.u_id;
 	const filter = req.query.filter;
 	const order = req.query.order;
 	const reverse = req.query.reverse;
@@ -302,9 +303,9 @@ const getProjects = async (req, res) => {
 		projects = await db.query(
 			`SELECT p.title, p.published_date, 
 			p.votes, p.project_id, v.vote 
-			FROM projects p LEFT JOIN projectvotes v 
-			ON v.project_id = p.project_id ORDER BY ${order1}, ${order2} LIMIT $1 OFFSET $2`,
-			[Number(page) * 10, Number(page - 1) * 10],
+			FROM projects p LEFT JOIN (SELECT vote, project_id FROM projectvotes WHERE u_id = $1) v 
+			ON v.project_id = p.project_id ORDER BY ${order1}, ${order2} LIMIT $2 OFFSET $3`,
+			[userId, Number(page) * 10, Number(page - 1) * 10],
 		);
 		projects = projects.rows;
 	} catch (e) {
@@ -394,9 +395,8 @@ const voteProject = async (req, res) => {
 	let voteTarget;
 	try {
 		voteTarget = await db.query(
-			`SELECT p.title, p.votes, p.project_id, v.vote, v.u_id
-            FROM projects p JOIN projectvotes v ON v.project_id = p.project_id WHERE p.project_id = $1`,
-			[projectId],
+			`SELECT u_id, vote, project_id FROM projectvotes WHERE project_id = $1 AND u_id = $2`,
+			[projectId, userId],
 		);
 		voteTarget = voteTarget.rows[0];
 	} catch (e) {

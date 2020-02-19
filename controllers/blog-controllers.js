@@ -48,18 +48,18 @@ const getBlogs = async (req, res) => {
 			message: 'Failed to get blogs',
 		});
 	}
-
+	const userId = req.decoded.u_id;
 	let blogs;
 	try {
 		blogs = await db.query(
 			`SELECT b.b_id, b.content, b.title, l.vote AS voted,
-            b.published_date, b.commentthread, votes, u.u_id, u.username 
+            b.published_date, b.commentthread, b.votes, u.u_id, u.username 
             FROM blogs b JOIN users u
             ON b.author = u.u_id 
-            LEFT JOIN likedposts l 
+            LEFT JOIN (SELECT vote, b_id FROM likedposts WHERE u_id = $1) l
             ON l.b_id = b.b_id 
-            ORDER BY ${order1}, ${order2} LIMIT $1 OFFSET $2`,
-			[Number(pagination) * 10, Number(pagination - 1) * 10],
+            ORDER BY ${order1}, ${order2} LIMIT $2 OFFSET $3`,
+			[userId, Number(pagination) * 10, Number(pagination - 1) * 10],
 		);
 		blogs = blogs.rows;
 		blogs.map((blog) => (blog.owner = blog.u_id === senderId));
@@ -192,10 +192,8 @@ const voteBlog = async (req, res) => {
 	let voteTarget;
 	try {
 		voteTarget = await db.query(
-			`SELECT b.title, b.votes, b.b_id, l.vote, l.u_id
-            FROM blogs b JOIN likedposts l ON b.b_id = l.b_id 
-            WHERE b.b_id = $1`,
-			[blogId],
+			`SELECT l.b_id, l.vote FROM likedposts l WHERE l.b_id = $1 AND l.u_id = $2`,
+			[blogId, userId],
 		);
 		voteTarget = voteTarget.rows[0];
 	} catch (e) {
@@ -213,9 +211,9 @@ const voteBlog = async (req, res) => {
 			switch (vote) {
 				case 0:
 					vote = -voteTarget.vote;
+					console.log(blogId, userId);
 					await client.query(
-						`DELETE FROM likedposts l 
-                            WHERE l.b_id = $1 AND l.u_id = $2`,
+						`DELETE FROM likedposts WHERE b_id = $1 AND u_id = $2`,
 						[blogId, userId],
 					);
 					break;
@@ -239,12 +237,12 @@ const voteBlog = async (req, res) => {
 					break;
 				default:
 					errorLogger.error(
-						'Failed to vote resource: Invalid vote input',
+						'Failed to vote blog: Invalid vote input',
 					);
 					return res.status(500).json({
 						success: false,
 						status: 'error',
-						message: 'Failed to vote resource.',
+						message: 'Failed to vote blog.',
 					});
 			}
 		} else {
@@ -255,6 +253,7 @@ const voteBlog = async (req, res) => {
 				[blogId, userId, vote],
 			);
 		}
+		console.log(vote, blogId);
 		await client.query(
 			`UPDATE blogs 
 			SET votes = votes + $1 WHERE b_id = $2`,

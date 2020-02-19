@@ -374,9 +374,8 @@ const voteResource = async (req, res) => {
 	let voteTarget;
 	try {
 		voteTarget = await db.query(
-			`SELECT r.title, r.votes, r.r_id, c.vote, c.u_id
-            FROM resources r JOIN voteconnections c ON r.r_id = c.r_id WHERE r.r_id = $1`,
-			[resourceId],
+			`SELECT c.vote, c.u_id FROM voteconnections c WHERE c.r_id = $1 AND c.u_id =$2`,
+			[resourceId, userId],
 		);
 		voteTarget = voteTarget.rows[0];
 	} catch (e) {
@@ -432,7 +431,7 @@ const voteResource = async (req, res) => {
 			await client.query(
 				`INSERT INTO 
                     voteconnections (r_id, u_id, vote) 
-                    VALUES ($1, $2, $3)`,
+                   	VALUES ($1, $2, $3)`,
 				[resourceId, userId, vote],
 			);
 		}
