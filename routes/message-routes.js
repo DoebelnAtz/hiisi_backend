@@ -9,6 +9,8 @@ router.get('/threads/:tid', messageController.getMessagesByThreadId);
 
 router.get('/threads', messageController.getThreadsByUserId);
 
+router.get('/threads/:tid/users', messageController.getUsersInThread);
+
 router.post(
 	'/threads/create_thread',
 	[
@@ -33,7 +35,5 @@ router.post(
 	],
 	messageController.addUserToThread,
 );
-
-router.get('/threads/:tid/users', messageController.getUsersInThread);
 
 module.exports = router;

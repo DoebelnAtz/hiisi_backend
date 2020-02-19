@@ -236,6 +236,13 @@ const addResource = async (req, res) => {
 };
 
 const deleteResource = async (req, res) => {
+	const errors = validationResult(req);
+	if (!errors.isEmpty()) {
+		return res.status(422).json({
+			status: 'error',
+			message: 'Invalid input please try again.',
+		});
+	}
 	const senderId = req.decoded.u_id;
 	const { resourceId, userId } = req.body;
 	let toDelete;

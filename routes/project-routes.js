@@ -58,10 +58,33 @@ router.post(
 
 router.get('/', projectControllers.getProjects);
 
-router.put('/boards/update_task', projectControllers.updateTask);
+router.put('/boards/update_task',
+	[
+		check('updatedTask.title')
+			.not()
+			.isEmpty(),
+		check('updatedTask.task_id')
+			.not()
+			.isEmpty()
+			.isNumeric(),
+		check('updatedTask.column_id')
+			.not()
+			.isEmpty()
+			.isNumeric(),
+	],
+	projectControllers.updateTask);
 
 router.put(
 	'/boards/update_task_position',
+	[
+		check('updatedTask.column_id')
+			.not()
+			.isEmpty()
+			.isNumeric(),
+		check('updatedTask.task_id')
+			.not()
+			.isEmpty()
+			.isNumeric(), ],
 	projectControllers.updateTaskPosition,
 );
 

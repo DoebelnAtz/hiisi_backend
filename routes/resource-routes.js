@@ -55,9 +55,28 @@ router.post(
 	resourceController.voteResource,
 );
 
-router.delete('/delete_resource', resourceController.deleteResource);
+router.delete('/delete_resource',
+	[
+		check('userId')
+			.not()
+			.isEmpty()
+			.isNumeric(),
+		check('resourceId')
+			.not()
+			.isEmpty()
+			.isNumeric(),
+	], resourceController.deleteResource);
 
-router.delete('/delete_tag', resourceController.deleteTagFromResource);
+router.delete('/delete_tag',[
+	check('tagId')
+		.not()
+		.isEmpty()
+		.isNumeric(),
+	check('rId')
+		.not()
+		.isEmpty()
+		.isNumeric(),
+]	, resourceController.deleteTagFromResource);
 
 router.put(
 	'/update_resource',
