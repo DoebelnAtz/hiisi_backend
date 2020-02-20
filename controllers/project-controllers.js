@@ -272,7 +272,7 @@ const getProjects = async (req, res) => {
 	// we are dangerously inserting values into a query so we need to make sure that
 	// the order parameter is correct
 	if (order !== 'popular' && order !== 'recent' && order !== 'title') {
-		errorLogger.error('Failed to get resources: invalid order parameter');
+		errorLogger.error('Failed to get projects: invalid order parameter');
 		return res.status(422).json({
 			status: 'error',
 			message: 'Failed to get resources',
@@ -504,6 +504,13 @@ const updateColumnTitle = async (req, res) => {
 };
 
 const updateTaskPosition = async (req, res) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+        return res.status(422).json({
+            status: 'error',
+            message: 'Invalid input please try again.',
+        });
+    }
 	const updatedTask = req.body;
 	try {
 		await db.query('UPDATE tasks SET column_id = $1 WHERE task_id = $2', [
@@ -522,6 +529,13 @@ const updateTaskPosition = async (req, res) => {
 };
 
 const updateTask = async (req, res) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+        return res.status(422).json({
+            status: 'error',
+            message: 'Invalid input please try again.',
+        });
+    }
 	const updatedTask = req.body;
 	try {
 		await db.query(
@@ -546,6 +560,62 @@ const updateTask = async (req, res) => {
 		});
 	}
 	res.json({ success: true });
+};
+
+const deleteTask = async(req,res) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+        return res.status(422).json({
+            status: 'error',
+            message: 'Invalid input please try again.',
+        });
+    }
+	const { taskId } = req.body;
+
+	const senderId = req.decoded.u_id;
+	let targetTask;
+	try {
+	    targetTask = await db.query(
+	        `SELECT t.task_id, t.commentthread, c.u_id 
+	        FROM tasks t JOIN taskcollaborators c 
+	        ON c.task_id = t.task_id
+	        WHERE t.task_id = $1 AND c.u_id = $2`, [taskId, senderId]);
+	    targetTask = targetTask.rows[0];
+	} catch(e) {
+	    errorLogger.error('Failed to find task to delete: ' + e);
+	    return res.status(500).json({
+	        status: 'error',
+	        message: 'Failed to find task to delete'
+	    })
+	}
+	const client = await db.connect();
+
+    try{
+        await client.query('BEGIN');
+        await client.query(
+            'DELETE FROM taskcollaborators ' +
+            'WHERE task_id = $1', [taskId]);
+        if (targetTask.commentthread) {
+            await client.query(`
+                DELETE FROM commentthreads WHERE t_id = $1
+            `, [targetTask.commentthread])
+        }
+        await client.query(`
+            DELETE FROM tasks WHERE task_id = $1
+        `,[taskId]);
+        await client.query('COMMIT');
+    } catch (e) {
+        await client.query('ROLLBACK');
+        errorLogger.error('Failed to delete task: ' + e);
+        return res.status(500).json({
+            success: false,
+            status: 'error',
+            message: 'Failed to delete task.'
+        })
+    } finally {
+        client.release();
+    }
+    res.json({success: true})
 };
 
 const getTaskById = async (req, res) => {
@@ -580,36 +650,87 @@ const getTaskById = async (req, res) => {
 	res.json(task);
 };
 
-const saveBoardState = async (req, res) => {
-	const { boardState } = req.body;
+const addProjectCollaborator = async (req, res) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+        return res.status(422).json({
+            status: 'error',
+            message: 'Invalid input please try again.',
+        });
+    }
 
-	const client = await db.connect();
+    const { userId, projectId } = req.body;
+    const senderId = req.decoded.u_id;
 
-	try {
-		await client.query('BEGIN');
-		boardState.map(async (column) => {
-			column.taskList.map(async (task) => {
-				if (task > 0) {
-					await client.query(
-						'UPDATE tasks SET column_id = $1 WHERE task_id = $2',
-						[column.column_id, task],
-					);
-				}
-			});
-		});
-		await client.query('COMMIT');
-	} catch (e) {
-		await client.query('ROLLBACK');
-		errorLogger.error('Failed to add task: ' + e);
-		return res.status(500).json({
-			success: false,
-			status: 'error',
-			message: 'Failed to save board.',
-		});
-	} finally {
-		client.release();
-	}
-	res.json({ success: true });
+    let targetUser;
+    let senderCollaborator;
+    let targetProject;
+    try {
+        targetUser = await db.query(
+            `SELECT username, u_id, profile_pic FROM users WHERE u_id = $1`, [userId]);
+        targetUser = targetUser.rows[0];
+        senderCollaborator = await db.query(
+            `SELECT u_id, project_id FROM projectcollaborators WHERE u_id = $1 AND project_id = $2`
+            , [senderId, projectId]
+        );
+        senderCollaborator = senderCollaborator.rows;
+        console.log(senderCollaborator);
+        if (!senderCollaborator.length) {
+            errorLogger.error('Failed to add user to project: unauthorized sender');
+            return res.status(403).json({
+                status: 'error',
+                message: 'Failed to add user to project: unauthorized sender'
+            })
+        }
+        else {
+            senderCollaborator = senderCollaborator[0]
+        }
+        targetProject = await db.query(
+            `SELECT project_id, t_id FROM projects WHERE project_id = $1`
+            ,[projectId]
+        );
+        targetProject = targetProject.rows;
+        if (!targetProject.length) {
+            errorLogger.error('Failed to add user to project: no project found matching given id');
+            return res.status(404).json({
+                status: 'error',
+                message: 'Failed to add user to project: no project found matching given id'
+            })
+        }
+        else {
+            targetProject = targetProject[0]
+        }
+    } catch(e) {
+        errorLogger.error('Failed to find user to add: ' + e);
+        return res.status(500).json({
+            status: 'error',
+            message: 'Failed to find user to add'
+        })
+    }
+
+    const client = await db.connect();
+
+        try{
+            await client.query('BEGIN');
+            await client.query(
+                `INSERT INTO threadconnections (thread_id, user_id) VALUES ($1, $2)`
+                ,[targetProject.t_id, userId]);
+            await client.query(
+                `INSERT INTO projectcollaborators (project_id, u_id) VALUES ($1, $2)`
+                ,[projectId, userId]);
+            await client.query('COMMIT');
+        } catch (e) {
+            await client.query('ROLLBACK');
+            errorLogger.error('Failed to add user to project: ' + e);
+            return res.status(500).json({
+                success: false,
+                status: 'error',
+                message: 'Failed to add user to project.'
+            })
+        } finally {
+            client.release();
+        }
+    res.json(targetUser)
 };
 
 exports.addTaskToBoard = addTaskToBoard;
@@ -619,8 +740,9 @@ exports.updateTaskPosition = updateTaskPosition;
 exports.getBoardById = getBoardById;
 exports.getProjects = getProjects;
 exports.getProjectById = getProjectById;
-exports.saveBoardState = saveBoardState;
 exports.getTaskById = getTaskById;
 exports.voteProject = voteProject;
+exports.deleteTask = deleteTask;
 exports.addCollaboratorToTask = addCollaboratorToTask;
 exports.updateColumnTitle = updateColumnTitle;
+exports.addProjectCollaborator = addProjectCollaborator;

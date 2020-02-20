@@ -18,8 +18,6 @@ router.post(
 
 router.get('/boards/:bid', projectControllers.getBoardById);
 
-router.post('/boards/save_board', projectControllers.saveBoardState);
-
 router.post('/create_project', projectControllers.createProject);
 
 router.post(
@@ -35,6 +33,21 @@ router.post(
 			.isNumeric(),
 	],
 	projectControllers.voteProject,
+);
+
+router.post(
+    '/add_user',
+    [
+        check('projectId')
+            .not()
+            .isEmpty()
+            .isNumeric(),
+        check('userId')
+            .not()
+            .isEmpty()
+            .isNumeric(),
+    ],
+    projectControllers.addProjectCollaborator
 );
 
 router.get('/:pid', projectControllers.getProjectById);
@@ -100,6 +113,17 @@ router.put(
 			.isNumeric(),
 	],
 	projectControllers.updateColumnTitle,
+);
+
+router.delete(
+	'/boards/tasks/delete_task',
+    [
+        check('taskId')
+            .not()
+            .isEmpty()
+            .isNumeric(),
+    ],
+	projectControllers.deleteTask
 );
 
 module.exports = router;
