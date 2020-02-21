@@ -275,11 +275,14 @@ const searchUsers = async (req, res, next) => {
         })
     }
 
-    const { search } = req.body;
-
+    const search = req.query.q;
+    console.log(search);
     let usersFound;
     try {
-        usersFound = await db.query("SELECT u_id, username, intraid, profile_pic FROM users WHERE username LIKE $1", [search + '%']);
+        usersFound = await db.query(
+            `SELECT u_id, username, intraid, profile_pic 
+            FROM users WHERE username LIKE $1`
+            , [search + '%']);
         usersFound = usersFound.rows;
     } catch (e) {
         console.log(e);

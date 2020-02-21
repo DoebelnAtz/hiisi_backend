@@ -27,21 +27,14 @@ router.get(
 );
 
 router.get(
-    '/:pid',
-    usersController.getUserById
+    '/search',
+    usersController.searchUsers
 );
 
 
-
-
-router.post(
-    '/search',
-    [
-        check('search')
-            .not()
-            .isEmpty(),
-    ],
-    usersController.searchUsers
+router.get(
+    '/:pid',
+    usersController.getUserById
 );
 
 module.exports = router;

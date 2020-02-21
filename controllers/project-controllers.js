@@ -382,6 +382,62 @@ const getProjectById = async (req, res) => {
 	res.json({ ...project, contributor, collaborators });
 };
 
+const getProjectCollaborators = async (req, res) => {
+
+	let projectId = req.query.projectId;
+
+	let collaborators;
+	try {
+	    collaborators = await db.query(
+	        `SELECT u.username, u.profile_pic, u.u_id
+	        FROM users u JOIN projectcollaborators c
+	        ON c.u_id = u.u_id WHERE c.project_id = $1`
+            , [projectId]);
+	    collaborators = collaborators.rows;
+	} catch(e) {
+        errorLogger.error('Failed to get project collaborators: ' + e);
+        return res.status(500).json({
+            status: 'error',
+            message: 'Failed to get project collaborators'
+        })
+    }
+    res.json(collaborators);
+};
+
+const updateProject = async (req, res) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+        return res.status(422).json({
+            status: 'error',
+            message: 'Invalid input please try again.',
+        });
+    }
+
+    const { projectId, title, description } = req.body;
+
+    const client = await db.connect();
+
+    try{
+        await client.query('BEGIN');
+        await client.query(
+            `UPDATE projects SET title = $1, description = $2 WHERE project_id = $3`
+        ,[title, description, projectId]
+        );
+        await client.query('COMMIT');
+    } catch (e) {
+        await client.query('ROLLBACK');
+        errorLogger.error('Failed to update Project: ' + e);
+        return res.status(500).json({
+            success: false,
+            status: 'error',
+            message: 'Failed to update Project.'
+        })
+    } finally {
+        client.release();
+    }
+    res.json({title: title, description: description})
+};
+
 const voteProject = async (req, res) => {
 	const errors = validationResult(req);
 	if (!errors.isEmpty()) {
@@ -742,7 +798,9 @@ exports.getProjects = getProjects;
 exports.getProjectById = getProjectById;
 exports.getTaskById = getTaskById;
 exports.voteProject = voteProject;
+exports.updateProject = updateProject;
 exports.deleteTask = deleteTask;
 exports.addCollaboratorToTask = addCollaboratorToTask;
 exports.updateColumnTitle = updateColumnTitle;
 exports.addProjectCollaborator = addProjectCollaborator;
+exports.getProjectCollaborators = getProjectCollaborators;

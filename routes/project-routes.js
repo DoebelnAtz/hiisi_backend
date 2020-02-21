@@ -50,9 +50,13 @@ router.post(
     projectControllers.addProjectCollaborator
 );
 
-router.get('/:pid', projectControllers.getProjectById);
-
 router.get('/boards/tasks/:tid', projectControllers.getTaskById);
+
+router.get('/collaborators', projectControllers.getProjectCollaborators);
+
+
+
+router.get('/:pid', projectControllers.getProjectById);
 
 router.post(
 	'/boards/tasks/add_user',
@@ -73,14 +77,10 @@ router.get('/', projectControllers.getProjects);
 
 router.put('/boards/update_task',
 	[
-		check('updatedTask.title')
+		check('title')
 			.not()
 			.isEmpty(),
-		check('updatedTask.task_id')
-			.not()
-			.isEmpty()
-			.isNumeric(),
-		check('updatedTask.column_id')
+		check('task_id')
 			.not()
 			.isEmpty()
 			.isNumeric(),
@@ -90,15 +90,32 @@ router.put('/boards/update_task',
 router.put(
 	'/boards/update_task_position',
 	[
-		check('updatedTask.column_id')
+		check('column_id')
 			.not()
 			.isEmpty()
 			.isNumeric(),
-		check('updatedTask.task_id')
+		check('task_id')
 			.not()
 			.isEmpty()
 			.isNumeric(), ],
 	projectControllers.updateTaskPosition,
+);
+
+router.put(
+    '/update_project',
+    [
+        check('projectId')
+            .not()
+            .isEmpty()
+            .isNumeric(),
+        check('title')
+            .not()
+            .isEmpty(),
+        check('description')
+            .not()
+            .isEmpty(),
+    ],
+    projectControllers.updateProject,
 );
 
 router.put(

@@ -137,11 +137,18 @@
     
     
     
+    PUT: /update_project
+
+    updates title, description of project
+    
+    required: ProjectId, title, description    
+    
+    
     PUT: /boards/update_task
 
     update task
     
-    required: updatedTask object with title, description, column_id and task_id fields
+    required: title, description, column_id and task_id fields
     
     
     PUT: /boards/update_column_title
@@ -156,7 +163,7 @@
     
     updates position of task in a board
     
-    required: updatedTask object with column_id, task_id field
+    required: column_id, task_id field
     
     
     
@@ -186,11 +193,11 @@
     
     
     
-    POST: /search
+    GET: /search
  
     returns user based on given string
     
-    required: search
+    required query param: q (search string)
  
 # messages
 
