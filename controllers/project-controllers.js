@@ -1,5 +1,5 @@
 const { validationResult } = require('express-validator');
-const { errorLogger, accessLogger } = require('../logger');
+const { errorLogger } = require('../logger');
 const db = require('../queries');
 
 const addTaskToBoard = async (req, res) => {
