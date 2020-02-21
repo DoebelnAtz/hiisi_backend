@@ -4,14 +4,14 @@ const { accessLogger, errorLogger } = require('../logger');
 
 const getMessagesByThreadId = async (req, res) => {
 	const threadId = req.params.tid;
-
+	const page = req.query.page;
 	let messages;
 	try {
 		messages = await db.query(
-			`SELECT username, u_id, profile_pic, m_id, message, time_sent 
-				FROM messages JOIN threads ON t_id = $1 AND messages.thread = $1 
-				JOIN users on users.u_id = messages.sender;`,
-			[threadId],
+			`SELECT username, u_id, profile_pic, m.m_id, m.message, m.time_sent 
+				FROM messages m JOIN threads t ON  t.t_id = m.thread
+				JOIN users on users.u_id = m.sender WHERE m.thread = $1 LIMIT $2 OFFSET $3`,
+			[threadId, page * 20, (page - 1) * 20],
 		);
 		messages = messages.rows;
 	} catch (e) {
