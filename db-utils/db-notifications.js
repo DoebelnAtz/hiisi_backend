@@ -53,7 +53,7 @@ const createNotification = async (notifObj) => {
 const getUserNotifications = async (userId) => {
     let userNotifications;
     try {
-        userNotifications = await Notification.find({u_id: userId}).sort({'date': -1})
+        userNotifications = await Notification.find({u_id: userId}).sort({'date': -1}).limit(10)
     } catch (e) {
         throw new Error ('Failed to create notification')
 
@@ -64,21 +64,12 @@ const getUserNotifications = async (userId) => {
 const readNotification = async (notificationId) => {
     let notification;
     try {
-        notification = await Notification.findById(notificationId);
-    } catch (e) {
-        throw new Error ('Failed to read notification')
-
-    }
-    if (!notification) {
-        throw new Error ('Failed to find notification')
-
-    }
-    notification.read = true;
-    try {
-        await notification.save();
+        notification = await Notification.update(
+            {'id': notificationId},
+            {'$set': {'read': true}},
+            {'multi': true});
     } catch (e) {
         throw new Error ('Failed to update notification')
-
     }
    return ({success: true})
 };
