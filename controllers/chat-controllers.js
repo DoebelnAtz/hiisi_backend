@@ -1,8 +1,7 @@
 const { validationResult } = require('express-validator');
 const db = require('../queries');
 const {accessLogger, errorLogger} = require('../logger');
-
-// socket controllers in this file
+const dbNotifications = require('../db-utils/db-notifications');
 
 const saveMessageToDB = async(socket, message, io) => {
 
@@ -41,9 +40,7 @@ const saveMessageToDB = async(socket, message, io) => {
             io.to(user.user_id).emit('notification', {type: 'message', sender: senderId, thread :user.thread_id});
         }
     );
-
     io.to(socket.request.headers.room).emit('chat-message', createdMessage);
-
 };
 
 exports.saveMessageToDB = saveMessageToDB;

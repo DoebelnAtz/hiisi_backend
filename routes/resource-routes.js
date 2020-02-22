@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { check } = require('express-validator');
 
-const resourceController = require('../controllers/resources-controllers');
+const resourceController = require('../controllers/resource-controllers');
 
 router.get('/', resourceController.getResources);
 

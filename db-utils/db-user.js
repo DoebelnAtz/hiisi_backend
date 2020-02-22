@@ -4,7 +4,8 @@ const createUser = async (userObj, res) => {
 
     let createdUser;
     try {
-        createdUser = await db.query('INSERT INTO users (username, intraId, password) VALUES ($1, $2, $3) RETURNING u_id, username, intraid',
+        createdUser = await db.query(
+            'INSERT INTO users (username, intraId, password) VALUES ($1, $2, $3) RETURNING u_id, username, intraid',
             [
                 userObj.username,
                 userObj.intraId,

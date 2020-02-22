@@ -1,48 +1,18 @@
+const dbNotifications = require('../db-utils/db-notifications');
 const {errorLogger} =  require('../logger');
-
-const mongoose = require('mongoose');
-const database = `mongodb+srv://aadlercr:94502491Hive@hivemind-fyteo.mongodb.net/hivemind?retryWrites=true&w=majority
-`;
-
-try {
-    mongoose.connect(database, { useNewUrlParser: true });
-} catch (e) {
-    errorLogger.error('Failed to connect to mongoDB: ' + e)
-}
-
-const db = mongoose.connection;
-
-db.on('error', console.error.bind(console, 'MongoDB connection error:'));
-
-// Defining models here since there is only one, unnecessary to create new directories for it.
-
-const Schema = mongoose.Schema;
-
-const NotificationSchema = new Schema({
-    type: String,
-    date: Date,
-    u_id: Number,
-    message: String,
-    link: String,
-    read: Boolean
-});
-
-const Notification = mongoose.model('Notification', NotificationSchema);
 
 const CreateNotification = async (req,res) => {
     const { message, type, userId, link } = req.body;
-
-    const createdNotification = new Notification({
+    console.log(req.body);
+    let createdNotification = {
         type: type,
-        date: new Date().toISOString(),
-        u_id: userId,
+        userId: userId,
         message: message,
         link: link,
-        read: false
-    });
-
+    };
+    console.log(createdNotification);
     try {
-        await createdNotification.save()
+        await dbNotifications.createNotification(createdNotification)
     } catch (e) {
         errorLogger.error('Failed to create notification: ' + e);
         return res.status(500).json({
@@ -58,7 +28,7 @@ const getUserNotifications = async (req, res) => {
 
     let userNotifications;
     try {
-        userNotifications = await Notification.find({u_id: userId})
+        userNotifications = await dbNotifications.getUserNotifications(userId)
     } catch (e) {
         errorLogger.error('Failed to find notificaitons matching user: ' + e);
         return res.status(500).json({
@@ -74,30 +44,12 @@ const readNotification = async (req, res) => {
     console.log(req.body);
     let notification;
     try {
-        notification = await Notification.findById(notificationId);
+        notification = await dbNotifications.readNotification(notificationId);
     } catch (e) {
         errorLogger.error('Failed to find notfication to update: ' + e);
         return res.status(500).json({
             status: 'error',
             message: 'Failed to find notfication to update'
-        })
-    }
-    if (!notification) {
-        errorLogger.error('Failed to find notification to update');
-        return res.status(404).json({
-            status: 'error',
-            message: 'Failed to find notification to update'
-        })
-    }
-    console.log(notification, notificationId);
-    notification.read = true;
-    try {
-        await notification.save();
-    } catch (e) {
-        errorLogger.error('Failed to update notification: ' + e);
-        return res.status(500).json({
-            status: 'error',
-            message: 'Failed to update notification'
         })
     }
     res.json({success: true})

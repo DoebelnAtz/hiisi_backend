@@ -41,9 +41,6 @@ const getResources = async (req, res) => {
 
 	let resources;
 	try {
-		// This is not a nice query, couldn't figure out how to do it
-		// cleaner but it is much faster than making a second looping query...
-		// Now to fix all other looping queries..
 		if (filter === 'none') {
 			resources = await db.query(
 				`SELECT vc.vote, u.username, u.profile_pic, u.u_id,

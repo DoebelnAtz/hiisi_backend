@@ -1,6 +1,8 @@
 const { validationResult } = require('express-validator');
 const { errorLogger, accessLogger } = require('../logger');
 const db = require('../queries');
+const dbNotifications = require('../db-utils/db-notifications');
+
 
 const getCommentThreadById = async (req, res) => {
 	const { tid } = req.params;
@@ -67,27 +69,33 @@ const getCommentThreadById = async (req, res) => {
 const createComment = async (req, res) => {
 	const errors = validationResult(req);
 	if (!errors.isEmpty()) {
-		return res.status(400).json({
+		return res.status(422).json({
 			status: 'error',
 			message: 'Invalid inputs passed, please check your data.',
 		});
 	}
 	const authorId = req.decoded.u_id;
-	const { threadId, content } = req.body;
+	const { threadId, content, originLink } = req.body;
 	console.log(threadId, content, authorId);
 	let thread;
 	try {
 		thread = await db.query(
-			'SELECT * FROM commentthreads WHERE t_id = $1',
+			`SELECT t_id, author 
+			FROM commentthreads 
+			JOIN comments 
+			ON t_id = childthread WHERE t_id = $1`,
 			[threadId],
 		);
-		if (!(thread = thread.rows[0]))
-			return res.status(401).json({
+		if (!(thread = thread.rows[0])) {
+			errorLogger.error(`Failed to create comment: Failed to find comment thread with the given thread id`);
+			return res.status(404).json({
 				status: 'error',
 				message:
 					'Failed to find comment thread with the given thread id',
 			});
+		}
 	} catch (e) {
+		errorLogger.error(`Failed to create comment: ${e}`);
 		return res.status(500).json({
 			status: 'error',
 			message: 'Failed to create comment, please try again later',
@@ -97,22 +105,23 @@ const createComment = async (req, res) => {
 	let commentAuthor;
 	try {
 		commentAuthor = await db.query(
-			'SELECT username, intraid, profile_pic FROM users ' +
+			'SELECT username, u_id, profile_pic FROM users ' +
 				'WHERE u_id = $1',
 			[authorId],
 		);
-		if (!(commentAuthor = commentAuthor.rows[0]))
-			return res.status(401).json({
+		if (!(commentAuthor = commentAuthor.rows[0])) {
+			errorLogger.error(`Failed to create comment: Failed to find user with the give user id`);
+			return res.status(404).json({
 				status: 'error',
 				message: 'Failed to find user with the given user id',
 			});
+		}
 	} catch (e) {
 		return res.status(500).json({
 			status: 'error',
 			message: 'Failed to create comment, please try again later',
 		});
 	}
-
 	const client = await db.connect();
 	let createdComment;
 	try {
@@ -137,6 +146,24 @@ const createComment = async (req, res) => {
 		});
 	} finally {
 		client.release();
+	}
+	if (commentAuthor.u_id !== authorId) {
+		try {
+			await dbNotifications.createNotification(
+				{
+					type: 'reply',
+					userId: thread.author,
+					message: `${commentAuthor.username} replied to your comment`,
+					link: `${originLink}?comment=${thread.t_id}`
+				}
+			)
+		} catch (e) {
+			errorLogger.error('Failed to create comment: ' + e);
+			return res.status(500).json({
+				status: 'error',
+				message: 'Failed to create comment',
+			});
+		}
 	}
 	res.status(201).json({ ...createdComment.rows[0], ...commentAuthor });
 };
