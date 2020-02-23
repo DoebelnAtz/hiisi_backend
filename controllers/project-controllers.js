@@ -204,7 +204,7 @@ const getBoardById = async (req, res) => {
             u.username, u.profile_pic, u.u_id, 
             c.title, c.column_id, 
             b.board_id, 
-            t.priority, t.title AS task_title, t.task_id, t.description 
+            t.priority, t.title AS task_title, t.task_id, t.description, t.status 
             FROM boards b 
             JOIN boardcolumns c 
             ON b.board_id = c.board_id 
@@ -237,6 +237,7 @@ const getBoardById = async (req, res) => {
 				columns[colIndex].tasks.push({
 					title: board[i].task_title,
 					task_id: board[i].task_id,
+					status: board[i].status,
 					priority: board[i].priority,
 					collaborators: [],
 				});
@@ -595,15 +596,17 @@ const updateTask = async (req, res) => {
 	const updatedTask = req.body;
 	try {
 		await db.query(
-			'UPDATE tasks ' +
-				'SET title = $1, column_id = $2, ' +
-				'description = $3, priority = $4' +
-				'WHERE task_id = $5',
+			`UPDATE tasks
+				SET title = $1, column_id = $2,
+				description = $3, priority = $4,
+				status = $5
+				WHERE task_id = $6`,
 			[
 				updatedTask.title,
 				updatedTask.column_id,
 				updatedTask.description,
 				Number(updatedTask.priority),
+				updatedTask.status,
 				updatedTask.task_id,
 			],
 		);
@@ -680,7 +683,7 @@ const getTaskById = async (req, res) => {
 	let task;
 	try {
 		task = await db.query(
-			'SELECT t.priority, t.description, t.task_id, t.title, t.column_id FROM tasks t ' +
+			'SELECT t.priority, t.description, t.status, t.task_id, t.title, t.column_id FROM tasks t ' +
 				'WHERE t.task_id = $1',
 			[taskId],
 		);
