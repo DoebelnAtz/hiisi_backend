@@ -22,6 +22,11 @@ router.get(
 );
 
 router.get(
+    '/online',
+    usersController.getOnlineUsers
+);
+
+router.get(
     '/api',
     () => api.intraApi('/users/61979')
 );

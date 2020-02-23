@@ -254,6 +254,29 @@ const login = async (req, res, next) => {
         { expiresIn: '24h' // expires in 24 hours
         }
     );
+
+    try {
+        let user = await db.query(
+            `UPDATE online_users SET last_updated = NOW() WHERE u_id = $1 RETURNING u_id`, [existingUser.u_id])
+        if (!user.rows.length) {
+            try {
+                await db.query(
+                    `INSERT INTO online_users VALUES ($1)`, [existingUser.u_id])
+            } catch (e) {
+                errorLogger.error(`Failed to create row for online_user: ${e}`);
+                return res.status().json({
+                    status: 'error',
+                    message: 'Failed to log in'
+                })
+            }
+        }
+    } catch (e) {
+        errorLogger.error(`: ${e}`);
+        return res.status().json({
+            status: 'error',
+            message: 'Failed to log in'
+        })
+    }
     // return the JWT token for the future API calls
     res.json({
         success: true,
@@ -263,9 +286,25 @@ const login = async (req, res, next) => {
     });
 };
 
+const getOnlineUsers = async (req, res) => {
+    let users;
+
+    try {
+        users = await db.query(
+            `SELECT u_id, last_updated FROM online_users WHERE last_updated > NOW() - interval '5 minutes'`)
+        users = users.rows;
+    } catch (e) {
+        errorLogger.error('Failed to get online users: ' + e)
+        return res.status(500).json({
+            status: 'error',
+            message: 'Failed to get online users'
+        })
+    }
+    res.json(users);
+};
 
 
-const searchUsers = async (req, res, next) => {
+const searchUsers = async (req, res) => {
 
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
@@ -295,6 +334,7 @@ const searchUsers = async (req, res, next) => {
 };
 
 exports.getMe = getMe;
+exports.getOnlineUsers = getOnlineUsers;
 exports.getUserFriends = getUserFriends;
 exports.getUsers = getUsers;
 exports.getUserById = getUserById;

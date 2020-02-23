@@ -58,10 +58,6 @@ io.on('connection', socket => {
         console.log(message);
         chatController.saveMessageToDB(socket, message, io);
     });
-    socket.on('is-online', () => {
-        console.log(`${socket.body.decoded.username} is online`);
-        io.to(socket.request.headers.room).emit('is-online-resp', socket.body.decoded)
-    });
     socket.on('disconnect', () => {
         console.log(`${socket.body.decoded.username} Disconnected from room: ${socket.request.headers.room}`);
         io.to(socket.request.headers.room).emit('left-room', socket.body.decoded)

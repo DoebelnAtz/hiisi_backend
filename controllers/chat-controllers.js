@@ -33,11 +33,10 @@ const saveMessageToDB = async(socket, message, io) => {
         errorLogger.error('FAILED TO SAVE MESSAGE: ' + e);
         return io.to(socket.body.decoded.u_id).emit('chat-message', {message: "failed to send message: ", m_id: new Date().toISOString(), username: 'marvin', time_sent: new Date(0).toISOString()})
     }
-    isAllowed.rows
-        .filter(user => {console.log(user); return user.user_id !== createdMessage.sender})
+    message.activeUsers
         .map(user => {
-            console.log('sending to room ' + user.user_id + ' by: ' + senderId);
-            io.to(user.user_id).emit('notification', {type: 'message', message: `${createdMessage.sender} has sent you a message`, link: `${socket.request.headers.room.slice(-1)}`});
+            console.log('sending to room ' + user.u_id + ' by: ' + senderId);
+            io.to(user.u_id).emit('notification', {type: 'message', message: `${createdMessage.sender} has sent you a message`, link: `${socket.request.headers.room.slice(-1)}`});
         }
     );
     io.to(socket.request.headers.room).emit('chat-message', createdMessage);

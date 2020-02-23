@@ -42,7 +42,16 @@ const getMessagesByThreadId = async (req, res) => {
 			message: 'Failed to get messages',
 		});
 	}
-
+	try {
+		let user = await db.query(
+			`UPDATE online_users SET last_updated = NOW() WHERE u_id = $1 RETURNING u_id`, [req.decoded.u_id])
+	} catch (e) {
+		errorLogger.error(`Failed to update online user while retrieving messages: ${e}`);
+		return res.status().json({
+			status: 'error',
+			message: 'Failed to get messages'
+		})
+	}
 	res.json({ title: isAllowed.rows[0].thread_name, messages });
 };
 
@@ -90,6 +99,16 @@ const getThreadsByUserId = async (req, res) => {
 			message: 'Failed to get threads',
 		});
 	}
+	try {
+		let user = await db.query(
+			`UPDATE online_users SET last_updated = NOW() WHERE u_id = $1 RETURNING u_id`, [req.decoded.u_id])
+	} catch (e) {
+		errorLogger.error(`Failed to update online user while retrieving messages: ${e}`);
+		return res.status().json({
+			status: 'error',
+			message: 'Failed to get messages'
+		})
+	}
 	res.json(threads);
 };
 
@@ -132,6 +151,7 @@ const createNewThread = async (req, res) => {
 	} finally {
 		client.release();
 	}
+
 	console.log(createdThread);
 	res.status(201).json(createdThread);
 };
