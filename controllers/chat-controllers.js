@@ -37,7 +37,7 @@ const saveMessageToDB = async(socket, message, io) => {
         .filter(user => {console.log(user); return user.user_id !== createdMessage.sender})
         .map(user => {
             console.log('sending to room ' + user.user_id + ' by: ' + senderId);
-            io.to(user.user_id).emit('notification', {type: 'message', sender: senderId, thread :user.thread_id});
+            io.to(user.user_id).emit('notification', {type: 'message', message: `${createdMessage.sender} has sent you a message`, link: `${socket.request.headers.room.slice(-1)}`});
         }
     );
     io.to(socket.request.headers.room).emit('chat-message', createdMessage);
