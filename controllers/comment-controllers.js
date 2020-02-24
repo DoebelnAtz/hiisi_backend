@@ -6,7 +6,7 @@ const dbNotifications = require('../db-utils/db-notifications');
 
 const getCommentThreadById = async (req, res) => {
 	const { tid } = req.params;
-	const page = req.query.page;
+
 	let sender;
 
 	const { senderId } = req.decoded.u_id;
@@ -39,8 +39,8 @@ const getCommentThreadById = async (req, res) => {
 			'SELECT comments.c_id, commentcontent, author, parentthread, ' +
 				'comment_date, childthread, username, profile_pic, u_id ' +
 				'FROM comments JOIN users ON comments.parentthread = $1 ' +
-				'WHERE comments.author = users.u_id ORDER BY comment_date ASC LIMIT $2 OFFSET $3',
-			[tid, Number(page) * 10, Number(page - 1) * 10],
+				'WHERE comments.author = users.u_id ORDER BY comment_date ASC',
+			[tid],
 		);
 		commentThread = commentThread.rows;
 	} catch (e) {
@@ -75,15 +75,17 @@ const createComment = async (req, res) => {
 		});
 	}
 	const authorId = req.decoded.u_id;
-	const { threadId, content, originLink, OPAuthorId } = req.body;
+	const { threadId, content, originLink } = req.body;
+	console.log(threadId, content, authorId);
 	let thread;
 	try {
 		thread = await db.query(
-			`SELECT t_id 
-			FROM commentthreads WHERE t_id = $1`,
+			`SELECT t_id, author 
+			FROM commentthreads 
+			JOIN comments 
+			ON t_id = childthread WHERE t_id = $1`,
 			[threadId],
 		);
-		console.log(thread.rows);
 		if (!(thread = thread.rows[0])) {
 			errorLogger.error(`Failed to create comment: Failed to find comment thread with the given thread id`);
 			return res.status(404).json({
@@ -145,12 +147,12 @@ const createComment = async (req, res) => {
 	} finally {
 		client.release();
 	}
-	if (OPAuthorId && commentAuthor.u_id !== authorId) {
+	if (commentAuthor.u_id !== authorId) {
 		try {
 			await dbNotifications.createNotification(
 				{
 					type: 'reply',
-					userId: OPAuthorId,
+					userId: thread.author,
 					message: `${commentAuthor.username} replied to your comment`,
 					link: `${originLink}?comment=${thread.t_id}`
 				}
