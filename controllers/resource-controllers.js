@@ -25,56 +25,61 @@ const getResources = async (req, res) => {
 	switch (order) {
 		case 'popular':
 			reverseOrder = reverse === 'true' ? 'ASC' : 'DESC';
-			order1 = `r.votes ${reverseOrder}`;
-			order2 = 'r.published_date DESC';
+			order1 = `votes ${reverseOrder}`;
+			order2 = 'published_date DESC';
 			break;
 		case 'recent':
 			reverseOrder = reverse === 'true' ? 'ASC' : 'DESC';
-			order1 = `r.published_date ${reverseOrder}`;
-			order2 = 'r.votes DESC';
+			order1 = `published_date ${reverseOrder}`;
+			order2 = 'votes DESC';
 			break;
 		default:
 			reverseOrder = reverse === 'true' ? 'DESC' : 'ASC';
-			order1 = `r.title ${reverseOrder}`;
-			order2 = 'r.published_date DESC';
+			order1 = `title ${reverseOrder}`;
+			order2 = 'published_date DESC';
 	}
 
 	let resources;
+	let result =[];
 	try {
-		if (filter === 'none') {
+			let filterQuery = Number(filter) ? `WHERE ${filter} IN (tag_one, tag_two, tag_three)` : '';
 			resources = await db.query(
-				`SELECT vc.vote, u.username, u.profile_pic, u.u_id,
-                r.votes, r.title, r.r_id, r.link, r.published_date,
-                c.tags, c.colors FROM resources r
-                JOIN users u ON r.author = u.u_id
-                LEFT JOIN (
-                SELECT c.r_id, array_agg(t.title) AS tags, array_agg(t.color) AS colors
-                FROM tagconnections c
-                JOIN tags t ON t.tag_id = c.tag_id
-                GROUP BY c.r_id) c using (r_id) 
-                LEFT JOIN voteconnections vc ON vc.r_id = r.r_id AND vc.u_id = $1 
-                ORDER BY ${order1}, ${order2} LIMIT $2 OFFSET $3`,
-				[userId, Number(page) * 10, Number(page - 1) * 10],
+				`SELECT r.r_id, r.tag_one, r.tag_two, r.tag_three, r.title, r.published_date, r.votes, 
+				u.username, u.u_id, vc.vote, t.title AS tag_title, t.tag_id, t.color 
+				FROM (SELECT title, r_id, tag_one, tag_two, tag_three, votes, published_date, author
+				FROM resources ORDER BY ${order1}, ${order2} LIMIT $1  OFFSET $2) r
+				LEFT JOIN users u ON u.u_id = r.author 
+				LEFT JOIN tags t ON r.tag_one = t.tag_id OR r.tag_two = t.tag_id OR r.tag_three = t.tag_id 
+				LEFT JOIN voteconnections vc ON vc.r_id = r.r_id 
+				AND vc.u_id = $3 ${filterQuery}`,
+				[Number(page) * 10, Number(page - 1) * 10, userId],
 			);
-		} else {
-			resources = await db.query(
-				`SELECT vc.vote, u.username, u.profile_pic, u.u_id, 
-                r.votes, r.title, r.r_id, r.link, r.published_date, 
-                c.tags, c.colors FROM resources r 
-                JOIN users u ON r.author = u.u_id 
-                JOIN (
-                SELECT c.r_id, array_agg(t.title) AS tags, array_agg(t.color) AS colors 
-                FROM tagconnections c 
-                JOIN tags t ON t.tag_id = c.tag_id 
-                GROUP BY c.r_id) c using (r_id) 
-                LEFT JOIN voteconnections vc ON vc.r_id = r.r_id 
-                AND vc.u_id = $2 WHERE $1 = ANY (tags) 
-                ORDER BY ${order1}, ${order2} LIMIT $3 OFFSET $4`,
-				[filter, userId, Number(page) * 10, Number(page - 1) * 10],
-			);
-		}
-
-		resources = resources.rows.map((r) => {
+			resources = resources.rows;
+			let prevId;
+			let nextResult = -1;
+			for (let i = 0; i < resources.length; i++) {
+				if (!result.length || result[nextResult].r_id !== resources[i].r_id) {
+					result.push({
+						title: resources[i].title,
+						r_id: resources[i].r_id,
+						vote: resources[i].vote,
+						username: resources[i].username,
+						u_id: resources[i].u_id,
+						votes: resources[i].votes,
+						published_date: resources[i].published_date,
+						tags: []
+					});
+					nextResult++;
+				}
+				if (resources[i].tag_title) {
+					result[nextResult].tags.push({
+						title: resources[i].tag_title,
+						tag_id: resources[i].tag_id,
+						color: resources[i].color
+					});
+				}
+			}
+		result = result.map((r) => {
 			return { ...r, owner: Number(r.u_id) === Number(userId) };
 		});
 	} catch (e) {
@@ -85,7 +90,7 @@ const getResources = async (req, res) => {
 		});
 	}
 	let tags;
-	res.json(resources);
+	res.json(result);
 };
 
 const deleteTagFromResource = async (req, res) => {

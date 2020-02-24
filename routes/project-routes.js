@@ -16,6 +16,8 @@ router.post(
 	projectControllers.addTaskToBoard,
 );
 
+router.get('/', projectControllers.getProjects);
+
 router.get('/boards/:bid', projectControllers.getBoardById);
 
 router.post('/create_project', projectControllers.createProject);
@@ -73,7 +75,6 @@ router.post(
 	projectControllers.addCollaboratorToTask,
 );
 
-router.get('/', projectControllers.getProjects);
 
 router.put('/boards/update_task',
 	[
