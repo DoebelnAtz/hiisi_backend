@@ -93,7 +93,7 @@ const getResources = async (req, res) => {
 	res.json(result);
 };
 
-const deleteTagFromResource = async (req, res) => {
+const removeTagFromResource = async (req, res) => {
 	const errors = validationResult(req);
 	if (!errors.isEmpty()) {
 		return res.status(422).json({
@@ -104,8 +104,7 @@ const deleteTagFromResource = async (req, res) => {
 	const { tagId, rId } = req.body;
 	try {
 		await db.query(
-			`DELETE from tagconnections WHERE tag_id = $1 
-			AND r_id = $2`,
+			`UPDATE resources SET `,
 			[tagId, rId],
 		);
 	} catch (e) {
@@ -126,19 +125,27 @@ const addTagToResource = async (req, res) => {
 			message: 'Invalid input please try again.',
 		});
 	}
-	const { tag, rId } = req.body;
+	const { tag, rId, tagIndex } = req.body;
 
 	const client = await db.connect();
 	let createdTag;
 	try {
 		await client.query('BEGIN');
-
-		let created = await client.query(
-			'INSERT INTO tagconnections (tag_id, r_id) ' +
-				'VALUES ($1, $2) RETURNING tag_id, r_id',
+        let tagColumn;
+        switch (tagIndex) {
+            case 1:
+                tagColumn = 'tag_one';
+                break;
+            case 2:
+                tagColumn = 'tag_two';
+                break;
+            default:
+                tagColumn = 'tag_three'
+        }
+		await client.query(
+			`UPDATE resources SET ${tagColumn} = $1 WHERE r_id = $2 AND ${tagColumn} IS NULL`,
 			[tag.tag_id, rId],
 		);
-		createdTag = created.rows[0];
 		await client.query('COMMIT');
 	} catch (e) {
 		await client.query('ROLLBACK');
@@ -161,10 +168,12 @@ const getResourceById = async (req, res) => {
 	let resource;
 	try {
 		resource = await db.query(
-			'SELECT r.r_id, r.title, r.link, r.description, r.author, r.votes, r.published_date, r.commentthread, ' +
-				'u.profile_pic, u.u_id, u.username ' +
-				'FROM resources r JOIN users u ON u.u_id = r.author ' +
-				'WHERE r.r_id = $1',
+			`SELECT r.r_id, r.title, r.link, 
+			r.description, r.author, r.votes, r.published_date, 
+			r.commentthread, r.tag_one, r.tag_two, r.tag_three,
+			u.profile_pic, u.u_id, u.username
+			FROM resources r JOIN users u ON u.u_id = r.author
+			WHERE r.r_id = $1`,
 			[resourceId],
 		);
 		resource = {
@@ -182,10 +191,10 @@ const getResourceById = async (req, res) => {
 	let tags;
 	try {
 		tags = await db.query(
-			'SELECT t.title, t.tag_id, t.color FROM ' +
-				'tags t JOIN tagconnections c ' +
-				'ON t.tag_id = c.tag_id WHERE c.r_id = $1',
-			[resourceId],
+			`SELECT t.title, t.tag_id, t.color FROM
+		    tags t
+			WHERE t.tag_id IN ($1, $2, $3)`,
+			[resource.tag_one, resource.tag_two, resource.tag_three],
 		);
 		tags = tags.rows;
 		resource = { ...resource, tags: tags };
@@ -464,7 +473,7 @@ exports.addResource = addResource;
 
 exports.deleteResource = deleteResource;
 
-exports.deleteTagFromResource = deleteTagFromResource;
+exports.removeTagFromResource = removeTagFromResource;
 
 exports.addTagToResource = addTagToResource;
 

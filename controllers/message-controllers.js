@@ -8,9 +8,9 @@ const getMessagesByThreadId = async (req, res) => {
 	let messages;
 	try {
 		messages = await db.query(
-			`SELECT * FROM (SELECT username, u_id, profile_pic, m.m_id, m.message, m.time_sent 
+			`SELECT username, u_id, profile_pic, m.m_id, m.message, m.time_sent 
 				FROM messages m JOIN threads t ON  t.t_id = m.thread
-				JOIN users on users.u_id = m.sender WHERE m.thread = $1 ORDER BY m.time_sent DESC LIMIT $2 OFFSET $3) AS mes ORDER BY mes.time_sent ASC`,
+				JOIN users on users.u_id = m.sender WHERE m.thread = $1 LIMIT $2 OFFSET $3`,
 			[threadId, page * 20, (page - 1) * 20],
 		);
 		messages = messages.rows;
