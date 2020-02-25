@@ -3,16 +3,16 @@ const logger = require('./logger');
 
 const pool = new pg.Pool ({
     user: 'admin',
-    host: '134.209.227.11',
-    database: 'hiveapi',
-    password: '94502491Hive',
+    host: '207.154.211.76',
+    database: 'hivemind',
+    password: 'Aadler97',
 });
 
 const client = new pg.Client ({
     user: 'admin',
-    host: '134.209.227.11',
-    database: 'hiveapi',
-    password: '94502491Hive',
+    host: '207.154.211.76',
+    database: 'hivemind',
+    password: 'Aadler97',
 });
 
 client.connect(function(err) {

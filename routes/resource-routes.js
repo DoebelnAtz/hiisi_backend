@@ -36,10 +36,6 @@ router.post(
 			.not()
 			.isEmpty()
 			.isNumeric(),
-        check('tagIndex')
-            .not()
-            .isEmpty()
-            .isNumeric(),
 	],
 	resourceController.addTagToResource,
 );
@@ -71,7 +67,7 @@ router.delete('/delete_resource',
 			.isNumeric(),
 	], resourceController.deleteResource);
 
-router.put('/delete_tag',[
+router.delete('/delete_tag',[
 	check('tagId')
 		.not()
 		.isEmpty()
@@ -80,7 +76,7 @@ router.put('/delete_tag',[
 		.not()
 		.isEmpty()
 		.isNumeric(),
-]	, resourceController.removeTagFromResource);
+]	, resourceController.deleteTagFromResource);
 
 router.put(
 	'/update_resource',

@@ -61,10 +61,7 @@ io.on('connection', socket => {
         console.log(message);
         chatController.saveMessageToDB(socket, message, io);
     });
-<<<<<<< HEAD
-=======
 
->>>>>>> parent of 046c8b1... socket notification update and message users online update
     socket.on('disconnect', () => {
         console.log('Disconnected from room: ' + socket.request.headers.referer)
         io.to(socket.request.headers.referer).emit('left-room', socket.body.decoded)

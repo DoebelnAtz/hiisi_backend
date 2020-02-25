@@ -35,13 +35,12 @@ const saveMessageToDB = async(socket, message, io) => {
     }
     message.activeUsers
         .map(user => {
-<<<<<<< HEAD
+
             console.log('sending to room ' + user.u_id + ' by: ' + senderId);
             io.to(user.u_id).emit('notification', {type: 'message', message: `${createdMessage.sender} has sent you a message`, link: `${socket.request.headers.room.slice(-1)}`});
-=======
+
             console.log('sending to room ' + user.user_id + ' by: ' + senderId);
             io.to(user.user_id).emit('notification', {type: 'message', sender: senderId, thread :user.thread_id});
->>>>>>> parent of 046c8b1... socket notification update and message users online update
         }
     );
     io.to(socket.request.headers.room).emit('chat-message', createdMessage);
