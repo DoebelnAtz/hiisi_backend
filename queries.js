@@ -5,14 +5,14 @@ const pool = new pg.Pool ({
     user: 'admin',
     host: '207.154.211.76',
     database: 'hivemind',
-    password: 'Aadler97',
+    password: process.env.db,
 });
 
 const client = new pg.Client ({
     user: 'admin',
     host: '207.154.211.76',
     database: 'hivemind',
-    password: 'Aadler97',
+    password: process.env.db
 });
 
 client.connect(function(err) {
