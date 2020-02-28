@@ -86,7 +86,7 @@ const getBlogById = async (req, res) => {
 			[blogId],
 		);
 		blog = blog.rows[0];
-		blog.owner = blog.u_id = req.decoded.u_id;
+		blog.owner = blog.u_id === req.decoded.u_id;
 	} catch (e) {
 		return res.status(500).json({
 			status: 'error',
@@ -99,7 +99,6 @@ const getBlogById = async (req, res) => {
 
 const getBlogsByUserId = async (req, res) => {
 	const userId = req.params.uid;
-
 	let userWithBlogs;
 	try {
 		userWithBlogs = await db.query(
@@ -274,6 +273,36 @@ const voteBlog = async (req, res) => {
 	res.json({ success: true });
 };
 
+const updateBlog = async (req, res) => {
+	const errors = validationResult(req);
+	if (!errors.isEmpty()) {
+		return res.status(400).json({
+			status: 'error',
+			message: 'Invalid input please try again.',
+		});
+	}
+
+	const { content, title, postId } = req.body;
+	let updatedBlog;
+	try {
+	    updatedBlog = await db.query(
+	        `UPDATE blogs
+	        SET
+	        title = $1,
+	        content = $2
+	        WHERE b_id = $3`,
+			[title, content, postId]);
+	    updatedBlog = updatedBlog.rows[0];
+	} catch (e) {
+	    errorLogger.error(`Failed to update blog: ${e}`);
+	    return res.status(500).json({
+	        status: 'error',
+	        message: 'Failed to update blog'
+	    })
+	}
+	res.json(updatedBlog)
+};
+
 const deleteBlog = async (req, res) => {
 	const senderId = req.decoded.u_id;
 
@@ -324,6 +353,7 @@ const deleteBlog = async (req, res) => {
 
 exports.getBlogs = getBlogs;
 exports.getBlogById = getBlogById;
+exports.updateBlog = updateBlog;
 exports.getBlogsByUserId = getBlogsByUserId;
 exports.createBlog = createBlog;
 exports.voteBlog = voteBlog;

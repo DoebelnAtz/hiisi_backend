@@ -30,7 +30,7 @@ const getMe = async (req, res) => {
             'active, ' +
             'correction_points, ' +
             'achievement_points ' +
-            'FROM users WHERE u_id = $1 RETURNING username', [userId]);
+            'FROM users WHERE u_id = $1', [userId]);
         user = user.rows[0];
     } catch (e) {
         errorLogger.error('Failed to get users by id: ' + e);
