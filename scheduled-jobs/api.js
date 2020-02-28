@@ -40,19 +40,8 @@ const intraApi = async (endpoint) => {
         });
     } catch (e) {
         if (e.response.status === 401) {
-
-            headers = {
-                Authorization: 'Bearer ' + await getToken(),
-            };
-            try {
-                resp = await axios({
-                    method: 'get',
-                    url: 'https://api.intra.42.fr/v2' + endpoint,
-                    headers: headers
-                });
-            } catch (e) {
-                return console.log(e.response.status)
-            }
+            token = getToken();
+            throw new Error('Failed to get token')
         }
     }
     return(resp.data)

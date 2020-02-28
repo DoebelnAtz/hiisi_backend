@@ -9,9 +9,6 @@ router.post(
         check('username')
             .not()
             .isEmpty(),
-        check('intraId')
-            .not()
-            .isEmpty(),
         check('password').isLength({ min: 6 })
     ],
     usersController.signUp

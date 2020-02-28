@@ -1,11 +1,13 @@
+const api = require('../scheduled-jobs/api');
 const { validationResult } = require('express-validator');
 const bcrypt = require('bcryptjs');
-
 const db = require('../queries');
 const { errorLogger, accessLogger } = require('../logger');
 const dbUsers = require('../db-utils/db-user');
 let jwt = require('jsonwebtoken');
 let config = require('../config');
+const users = require('./../users');
+const utils = require('../utils/utils');
 
 const getMe = async (req, res) => {
     // More secure version of getUserById, it gets the uid from token supplied id
@@ -28,7 +30,7 @@ const getMe = async (req, res) => {
             'active, ' +
             'correction_points, ' +
             'achievement_points ' +
-            'FROM users WHERE u_id = $1', [userId]);
+            'FROM users WHERE u_id = $1 RETURNING username', [userId]);
         user = user.rows[0];
     } catch (e) {
         errorLogger.error('Failed to get users by id: ' + e);
@@ -43,7 +45,6 @@ const getMe = async (req, res) => {
             message: 'Couldn\'t find user matching given id.'
         })
     }
-
     res.json(user);
 };
 
@@ -156,8 +157,11 @@ const signUp = async (req, res) => {
             message: 'Invalid input.'
         })
     }
-
-    const {username, password, intraId} = req.body;
+    const { username, password } = req.body;
+    let intraId = users.find((user) => {
+        console.log(user.login, user.id);
+        return user.login === username
+    }).id;
 
     let existingUser;
     try {
@@ -194,8 +198,58 @@ const signUp = async (req, res) => {
         hashedPassword,
     };
 
-    createdUser = await dbUsers.createUser(createdUser, res);
-
+    const client = await db.connect();
+    try{
+        await client.query('BEGIN');
+        let userinfo = await api.intraApi('/users/' + intraId);
+        await utils.sleep(1000);
+        await client.query(`
+            INSERT INTO users (
+            username,
+            password,
+            intraid,
+            profile_pic,
+            level,
+            grade,
+            class_of,
+            wallet,
+            location,
+            correction_points,
+            achievement_points,
+            active
+            ) VALUES (
+            $1, $2, $3, $4,
+            $5, $6, $7, $8,
+            $9, $10, $11, $12
+            )
+        `,
+            [
+                username,
+                hashedPassword,
+                intraId,
+                userinfo.image_url,
+                userinfo.cursus_users[0].level,
+                userinfo.cursus_users[0].grade,
+                userinfo.pool_month + ' ' + userinfo.pool_year,
+                userinfo.wallet,
+                userinfo.location,
+                userinfo.correction_point,
+                utils.countAchievementPoints(userinfo.achievements),
+                !!userinfo.location,
+            ]);
+        await client.query('COMMIT');
+    } catch (e) {
+        errorLogger.error('Failed to create user: ' + e);
+        await client.query('ROLLBACK');
+        return res.status(500).json(
+            {
+                status: 'Error',
+                message: 'Failed to create user'
+            },
+        )
+    } finally {
+        client.release();
+    }
     res.status(201).json({createdUser: createdUser });
 };
 
