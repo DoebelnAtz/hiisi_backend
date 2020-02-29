@@ -15,22 +15,22 @@ const getMe = async (req, res) => {
     let user;
     try {
         user = await db.query(
-            'SELECT ' +
-            'u_id, ' +
-            'username, ' +
-            'intraid, ' +
-            'profile_pic, ' +
-            'coalition_points, ' +
-            'coalition_rank, ' +
-            'grade, ' +
-            'level, ' +
-            'class_of, ' +
-            'wallet, ' +
-            'location, ' +
-            'active, ' +
-            'correction_points, ' +
-            'achievement_points ' +
-            'FROM users WHERE u_id = $1', [userId]);
+            `SELECT
+            u_id,
+            username,
+            intraid, 
+            profile_pic, 
+            coalition_points, 
+            coalition_rank,
+            grade, 
+            level, 
+            class_of, 
+            wallet, 
+            location, 
+            active, 
+            correction_points, 
+            achievement_points 
+            FROM users WHERE u_id = $1`, [userId]);
         user = user.rows[0];
     } catch (e) {
         errorLogger.error('Failed to get users by id: ' + e);
@@ -76,21 +76,21 @@ const getUsers = async (req, res) => {
     let users;
     try {
         users = await db.query(
-            'SELECT ' +
-            'u_id, ' +
-            'username, ' +
-            'profile_pic, ' +
-            'coalition_points, ' +
-            'coalition_rank, ' +
-            'grade, ' +
-            'level, ' +
-            'class_of, ' +
-            'wallet, ' +
-            'location, ' +
-            'active, ' +
-            'correction_points, ' +
-            'achievement_points ' +
-            'FROM users');
+            `SELECT
+            u_id, 
+            username, 
+            profile_pic, 
+            coalition_points, 
+            coalition_rank, 
+            grade, 
+            level, 
+            class_of, 
+            wallet, 
+            location, 
+            active, 
+            correction_points, 
+            achievement_points 
+            FROM users`);
         users = users.rows;
     } catch (e) {
         return console.log('ERROR: ' + e);
@@ -112,22 +112,22 @@ const getUserById = async (req, res) => {
     let user;
     try {
         user = await db.query(
-            'SELECT ' +
-            'u_id, ' +
-            'username, ' +
-            'intraid, ' +
-            'profile_pic, ' +
-            'coalition_points, ' +
-            'coalition_rank, ' +
-            'grade, ' +
-            'level, ' +
-            'class_of, ' +
-            'wallet, ' +
-            'location, ' +
-            'active, ' +
-            'correction_points, ' +
-            'achievement_points ' +
-            'FROM users WHERE u_id = $1', [userId]);
+            `SELECT 
+            u_id, 
+            username, 
+            intraid, 
+            profile_pic, 
+            coalition_points, 
+            coalition_rank, 
+            grade, 
+            level, 
+            class_of, 
+            wallet,
+            location, 
+            active, 
+            correction_points, 
+            achievement_points 
+            FROM users WHERE u_id = $1`, [userId]);
         user = user.rows[0];
     } catch (e) {
         errorLogger.error('Failed to get users by id: ' + e);

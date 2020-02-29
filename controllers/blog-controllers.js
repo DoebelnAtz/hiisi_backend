@@ -158,9 +158,9 @@ const createBlog = async (req, res) => {
 		);
 		res = res.rows[0];
 		createdBlog = await client.query(
-			'INSERT INTO blogs(title, content, author, commentthread, published_date) ' +
-				'VALUES($1, $2, $3, $4, $5) ' +
-				'RETURNING b_id, title, content, author, commentthread, votes, published_date',
+			`INSERT INTO blogs(title, content, author, commentthread, published_date)
+				VALUES($1, $2, $3, $4, $5) 
+				RETURNING b_id, title, content, author, commentthread, votes, published_date`,
 			[title, content, authorId, res.t_id, published_date],
 		);
 		await client.query('COMMIT');
@@ -191,7 +191,9 @@ const voteBlog = async (req, res) => {
 	let voteTarget;
 	try {
 		voteTarget = await db.query(
-			`SELECT l.b_id, l.vote FROM likedposts l WHERE l.b_id = $1 AND l.u_id = $2`,
+			`SELECT l.b_id, l.vote 
+			FROM likedposts l 
+			WHERE l.b_id = $1 AND l.u_id = $2`,
 			[blogId, userId],
 		);
 		voteTarget = voteTarget.rows[0];
@@ -283,6 +285,7 @@ const updateBlog = async (req, res) => {
 	}
 
 	const { content, title, postId } = req.body;
+	const senderId = req.decoded.u_id;
 	let updatedBlog;
 	try {
 	    updatedBlog = await db.query(
@@ -290,8 +293,8 @@ const updateBlog = async (req, res) => {
 	        SET
 	        title = $1,
 	        content = $2
-	        WHERE b_id = $3`,
-			[title, content, postId]);
+	        WHERE b_id = $3 AND author = $4`,
+			[title, content, postId, senderId]);
 	    updatedBlog = updatedBlog.rows[0];
 	} catch (e) {
 	    errorLogger.error(`Failed to update blog: ${e}`);
