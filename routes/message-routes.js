@@ -36,4 +36,15 @@ router.post(
 	messageController.addUserToThread,
 );
 
+router.delete(
+	'/threads/delete_thread',
+	[
+		check('targetId')
+			.not()
+			.isEmpty()
+			.isNumeric(),
+	],
+	messageController.deleteThread
+);
+
 module.exports = router;

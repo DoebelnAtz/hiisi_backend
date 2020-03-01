@@ -82,7 +82,7 @@ const createProject = async (req, res) => {
 		);
 		commentthread = commentthread.rows[0];
 		let chatthread = await client.query(
-			`INSERT INTO threads (thread_name) VALUES ($1) 
+			`INSERT INTO threads (thread_name, project_thread) VALUES ($1, true) 
 			RETURNING t_id`,
 			[title],
 		);
@@ -534,7 +534,7 @@ const voteProject = async (req, res) => {
 	res.json({ success: true });
 };
 
-const updateColumnTitle = async (req, res) => {
+const updateColumn = async (req, res) => {
 	const errors = validationResult(req);
 	if (!errors.isEmpty()) {
 		return res.status(422).json({
@@ -542,14 +542,14 @@ const updateColumnTitle = async (req, res) => {
 			message: 'Invalid input please try again.',
 		});
 	}
-	const { title, columnId } = req.body;
+	const { title, columnId, wipLimit } = req.body;
 	let newTitle;
 	try {
 		newTitle = await db.query(
-			`UPDATE boardcolumns SET title = $1 
-            WHERE column_id = $2 
+			`UPDATE boardcolumns SET title = $1, wip_limit = $2 
+            WHERE column_id = $3
             RETURNING title`,
-			[title, columnId],
+			[title, wipLimit, columnId],
 		);
 		newTitle = newTitle.rows[0];
 	} catch (e) {
@@ -807,6 +807,6 @@ exports.voteProject = voteProject;
 exports.updateProject = updateProject;
 exports.deleteTask = deleteTask;
 exports.addCollaboratorToTask = addCollaboratorToTask;
-exports.updateColumnTitle = updateColumnTitle;
+exports.updateColumn = updateColumn;
 exports.addProjectCollaborator = addProjectCollaborator;
 exports.getProjectCollaborators = getProjectCollaborators;

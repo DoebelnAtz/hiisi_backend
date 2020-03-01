@@ -120,7 +120,7 @@ router.put(
 );
 
 router.put(
-	'/boards/update_column_title',
+	'/boards/update_column',
 	[
 		check('title')
 			.not()
@@ -130,7 +130,7 @@ router.put(
 			.isEmpty()
 			.isNumeric(),
 	],
-	projectControllers.updateColumnTitle,
+	projectControllers.updateColumn,
 );
 
 router.delete(
