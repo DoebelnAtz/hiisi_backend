@@ -89,9 +89,9 @@ const createProject = async (req, res) => {
 		chatthread = chatthread.rows[0];
 		createdProject = await client.query(
 			`INSERT INTO projects 
-			(title, description, link, t_id, commentthread) 
-			VALUES ($1, $2, $3, $4, $5) RETURNING *`,
-			[title, description, link, chatthread.t_id, commentthread.t_id],
+			(title, description, link, t_id, commentthread, creator) 
+			VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
+			[title, description, link, chatthread.t_id, commentthread.t_id, userId],
 		);
 		createdProject = createdProject.rows[0];
 		let board = await client.query(
@@ -304,9 +304,9 @@ const getProjects = async (req, res) => {
 	let projects;
 	try {
 		projects = await db.query(
-			`SELECT p.title, p.published_date, 
+			`SELECT p.title, p.published_date, u.username, p.creator, 
 			p.votes, p.project_id, v.vote 
-			FROM projects p LEFT JOIN (SELECT vote, project_id FROM projectvotes WHERE u_id = $1) v 
+			FROM projects p JOIN users u ON p.creator = u.u_id LEFT JOIN (SELECT vote, project_id FROM projectvotes WHERE u_id = $1) v 
 			ON v.project_id = p.project_id ORDER BY ${order1}, ${order2} LIMIT $2 OFFSET $3`,
 			[userId, Number(page) * 10, Number(page - 1) * 10],
 		);
@@ -347,10 +347,11 @@ const getProjectById = async (req, res) => {
 	let project;
 	try {
 		project = await db.query(
-			'SELECT p.title, p.commentthread, ' +
-				'b.board_id, p.project_id, p.votes, p.t_id, p.description, p.link, p.published_date ' +
-				'FROM projects p JOIN boards b ' +
-				'ON b.project_id = p.project_id AND p.project_id = $1',
+			`SELECT p.title, p.commentthread, p.creator,
+				b.board_id, p.project_id, p.votes, p.t_id, 
+				p.description, p.link, p.published_date
+				FROM projects p JOIN boards b 
+				ON b.project_id = p.project_id AND p.project_id = $1`,
 			[projectId],
 		);
 		project = project.rows[0];

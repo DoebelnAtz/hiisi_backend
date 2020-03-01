@@ -82,7 +82,7 @@ const createComment = async (req, res) => {
 		thread = await db.query(
 			`SELECT t_id, author 
 			FROM commentthreads 
-			JOIN comments 
+			LEFT JOIN comments 
 			ON t_id = childthread WHERE t_id = $1`,
 			[threadId],
 		);
@@ -96,27 +96,6 @@ const createComment = async (req, res) => {
 		}
 	} catch (e) {
 		errorLogger.error(`Failed to create comment: ${e}`);
-		return res.status(500).json({
-			status: 'error',
-			message: 'Failed to create comment, please try again later',
-		});
-	}
-
-	let commentAuthor;
-	try {
-		commentAuthor = await db.query(
-			'SELECT username, u_id, profile_pic FROM users ' +
-				'WHERE u_id = $1',
-			[authorId],
-		);
-		if (!(commentAuthor = commentAuthor.rows[0])) {
-			errorLogger.error(`Failed to create comment: Failed to find user with the give user id`);
-			return res.status(404).json({
-				status: 'error',
-				message: 'Failed to find user with the given user id',
-			});
-		}
-	} catch (e) {
 		return res.status(500).json({
 			status: 'error',
 			message: 'Failed to create comment, please try again later',
@@ -147,25 +126,22 @@ const createComment = async (req, res) => {
 	} finally {
 		client.release();
 	}
-	if (commentAuthor.u_id !== authorId) {
+	console.log(thread.author, authorId);
+	if (thread.author !== authorId) {
 		try {
-			await dbNotifications.createNotification(
+			dbNotifications.createNotification(
 				{
 					type: 'reply',
 					userId: thread.author,
-					message: `${commentAuthor.username} replied to your comment`,
+					message: `${req.decoded.username} replied to your comment`,
 					link: `${originLink}?comment=${thread.t_id}`
 				}
 			)
 		} catch (e) {
-			errorLogger.error('Failed to create comment: ' + e);
-			return res.status(500).json({
-				status: 'error',
-				message: 'Failed to create comment',
-			});
+			errorLogger.error('Failed to create notification: ' + e);
 		}
 	}
-	res.status(201).json({ ...createdComment.rows[0], ...commentAuthor });
+	res.status(201).json({ ...createdComment.rows[0], username: req.decoded.username, profile_pic: `https://cdn.intra.42.fr/users/medium_${req.decoded.username}.jpg` });
 };
 
 exports.getCommentThreadById = getCommentThreadById;
