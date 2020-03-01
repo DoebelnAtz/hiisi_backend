@@ -305,9 +305,16 @@ const getProjects = async (req, res) => {
 	try {
 		projects = await db.query(
 			`SELECT p.title, p.published_date, u.username, p.creator, 
-			p.votes, p.project_id, v.vote 
-			FROM projects p JOIN users u ON p.creator = u.u_id LEFT JOIN (SELECT vote, project_id FROM projectvotes WHERE u_id = $1) v 
-			ON v.project_id = p.project_id ORDER BY ${order1}, ${order2} LIMIT $2 OFFSET $3`,
+			p.votes, p.project_id, v.vote, collab.collaborators
+			FROM projects p JOIN users u ON p.creator = u.u_id 
+			LEFT JOIN (SELECT vote, project_id FROM projectvotes WHERE u_id = $1) v 
+			ON v.project_id = p.project_id 
+			LEFT JOIN (
+			SELECT pc.project_id, array_agg(cu.profile_pic) AS collaborators 
+			FROM users cu 
+			JOIN projectcollaborators pc ON pc.u_id = cu.u_id GROUP BY pc.project_id
+			) collab ON collab.project_id = p.project_id
+			ORDER BY ${order1}, ${order2} LIMIT $2 OFFSET $3`,
 			[userId, Number(page) * 10, Number(page - 1) * 10],
 		);
 		projects = projects.rows;
@@ -317,24 +324,6 @@ const getProjects = async (req, res) => {
 			status: 'error',
 			message: 'Failed to get projects',
 		});
-	}
-
-	for (var i = 0; i < projects.length; i++) {
-		try {
-			let resp = await db.query(
-				'SELECT u.profile_pic, u.u_id, u.username ' +
-					'FROM projects p JOIN projectcollaborators c ON c.project_id = p.project_id ' +
-					'JOIN users u ON c.u_id = u.u_id WHERE p.project_id = $1',
-				[projects[i].project_id],
-			);
-			projects[i].collaborators = resp.rows;
-		} catch (e) {
-			errorLogger.error('Failed to get projects: ' + e);
-			return res.status(500).json({
-				status: 'error',
-				message: 'Failed to get projects.',
-			});
-		}
 	}
 	res.json(projects);
 };
