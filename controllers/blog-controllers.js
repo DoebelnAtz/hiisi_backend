@@ -52,7 +52,7 @@ const getBlogs = async (req, res) => {
 	let blogs;
 	try {
 		blogs = await db.query(
-			`SELECT b.b_id, b.content, b.title, l.vote AS voted,
+			`SELECT b.b_id, b.content, b.title, b.edited, l.vote AS voted,
             b.published_date, b.commentthread, b.votes, u.u_id, u.username 
             FROM blogs b JOIN users u
             ON b.author = u.u_id 
@@ -79,7 +79,7 @@ const getBlogById = async (req, res) => {
 	let blog;
 	try {
 		blog = await db.query(
-			`SELECT b.title, b.content, 
+			`SELECT b.title, b.content, b.edited,
 			b.b_id, b.commentthread, b.published_date, 
 			u.username, u.u_id, u.profile_pic
 			FROM blogs b JOIN users u ON u.u_id = author WHERE b_id = $1`,
@@ -292,7 +292,8 @@ const updateBlog = async (req, res) => {
 	        `UPDATE blogs
 	        SET
 	        title = $1,
-	        content = $2
+	        content = $2,
+	        edited = NOW()
 	        WHERE b_id = $3 AND author = $4`,
 			[title, content, postId, senderId]);
 	    updatedBlog = updatedBlog.rows[0];

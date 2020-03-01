@@ -111,8 +111,8 @@ const createProject = async (req, res) => {
 		for (var i = 0; i < 5; i++) {
 			let column = await client.query(
 				`INSERT INTO boardcolumns 
-				(board_id, title) VALUES 
-				($1, $2)`,
+				(board_id, title, wip_limit) VALUES 
+				($1, $2, ${!i ? null : 2})`,
 				[board.board_id, boardTitles[i]],
 			);
 		}
@@ -202,9 +202,9 @@ const getBoardById = async (req, res) => {
 		board = await db.query(
 			`SELECT 
             u.username, u.profile_pic, u.u_id, 
-            c.title, c.column_id, 
+            c.title, c.column_id, c.wip_limit, 
             b.board_id, 
-            t.priority, t.title AS task_title, t.task_id, t.description, t.status 
+            t.priority, t.title AS task_title, t.task_id, t.description, t.status, t.color_tag 
             FROM boards b 
             JOIN boardcolumns c 
             ON b.board_id = c.board_id 
@@ -228,6 +228,7 @@ const getBoardById = async (req, res) => {
 					title: board[i].title,
 					column_id: board[i].column_id,
 					column_number: colIndex,
+					wip_limit: board[i].wip_limit,
 					tasks: [],
 				});
 				taskIndex = -1;
@@ -237,6 +238,7 @@ const getBoardById = async (req, res) => {
 				columns[colIndex].tasks.push({
 					title: board[i].task_title,
 					task_id: board[i].task_id,
+					color_tag: board[i].color_tag,
 					status: board[i].status,
 					priority: board[i].priority,
 					collaborators: [],
@@ -599,14 +601,15 @@ const updateTask = async (req, res) => {
 			`UPDATE tasks
 				SET title = $1, column_id = $2,
 				description = $3, priority = $4,
-				status = $5
-				WHERE task_id = $6`,
+				status = $5, color_tag = $6
+				WHERE task_id = $7`,
 			[
 				updatedTask.title,
 				updatedTask.column_id,
 				updatedTask.description,
 				Number(updatedTask.priority),
 				updatedTask.status,
+				updatedTask.color_tag,
 				updatedTask.task_id,
 			],
 		);
@@ -683,7 +686,7 @@ const getTaskById = async (req, res) => {
 	let task;
 	try {
 		task = await db.query(
-			'SELECT t.priority, t.description, t.status, t.task_id, t.title, t.column_id FROM tasks t ' +
+			'SELECT t.priority, t.description, t.status, t.color_tag, t.task_id, t.title, t.column_id FROM tasks t ' +
 				'WHERE t.task_id = $1',
 			[taskId],
 		);

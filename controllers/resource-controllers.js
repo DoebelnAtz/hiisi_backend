@@ -44,7 +44,7 @@ const getResources = async (req, res) => {
         if (filter === 'none') {
             resources = await db.query(
                 `SELECT vc.vote, u.username, u.profile_pic, u.u_id,
-                r.votes, r.title, r.r_id, r.link, r.published_date,
+                r.votes, r.title, r.r_id, r.link, r.published_date, r.edited,
                 c.tags, c.colors FROM resources r
                 JOIN users u ON r.author = u.u_id
                 LEFT JOIN (
@@ -59,7 +59,7 @@ const getResources = async (req, res) => {
         } else {
             resources = await db.query(
                 `SELECT vc.vote, u.username, u.profile_pic, u.u_id, 
-                r.votes, r.title, r.r_id, r.link, r.published_date, 
+                r.votes, r.title, r.r_id, r.link, r.published_date, r.edited, 
                 c.tags, c.colors FROM resources r 
                 JOIN users u ON r.author = u.u_id 
                 JOIN (
@@ -338,7 +338,8 @@ const updateResource = async (req, res) => {
         UPDATE resources SET 
         description = $1, 
         link = $2, 
-        title = $3 
+        title = $3,
+        edited = NOW() 
         WHERE r_id = $4`,
 			[
 				resource.description,
