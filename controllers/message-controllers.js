@@ -130,8 +130,8 @@ const createNewThread = async (req, res) => {
 	try {
 		await client.query('BEGIN');
 		createdThread = await client.query(
-			'INSERT INTO threads (thread_name) ' +
-				'VALUES ($1) RETURNING t_id AS thread_id, thread_name',
+			`INSERT INTO threads (thread_name) 
+				VALUES ($1) RETURNING t_id AS thread_id, thread_name`,
 			[threadName],
 		);
 		createdThread = createdThread.rows[0];
@@ -177,8 +177,8 @@ const addUserToThread = async (req, res) => {
 	}
 	try {
 		let checkSenderIsInThread = await db.query(
-			'SELECT * FROM threadconnections WHERE user_id = $1 ' +
-				'AND thread_id = $2',
+			`SELECT * FROM threadconnections WHERE user_id = $1 
+				AND thread_id = $2`,
 			[senderId, threadId],
 		);
 		if (!checkSenderIsInThread.rows.length) {
