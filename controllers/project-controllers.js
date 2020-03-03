@@ -315,7 +315,7 @@ const getProjects = async (req, res) => {
 			JOIN projectcollaborators pc ON pc.u_id = cu.u_id GROUP BY pc.project_id
 			) collab ON collab.project_id = p.project_id
 			ORDER BY ${order1}, ${order2} LIMIT $2 OFFSET $3`,
-			[userId, Number(page) * 10, Number(page - 1) * 10],
+			[userId, Number(page) * 14, Number(page - 1) * 14],
 		);
 		projects = projects.rows;
 	} catch (e) {

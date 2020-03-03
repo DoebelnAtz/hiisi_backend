@@ -59,7 +59,7 @@ const getBlogs = async (req, res) => {
             LEFT JOIN (SELECT vote, b_id FROM likedposts WHERE u_id = $1) l
             ON l.b_id = b.b_id 
             ORDER BY ${order1}, ${order2} LIMIT $2 OFFSET $3`,
-			[userId, Number(pagination) * 10, Number(pagination - 1) * 10],
+			[userId, Number(pagination) * 14, Number(pagination - 1) * 14],
 		);
 		blogs = blogs.rows;
 		blogs.map((blog) => (blog.owner = blog.u_id === senderId));
