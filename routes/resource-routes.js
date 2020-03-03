@@ -22,7 +22,7 @@ router.post(
 			.isEmpty()
 			.isNumeric(),
 	],
-	resourceController.addResource,
+	resourceController.createResource,
 );
 
 router.post(

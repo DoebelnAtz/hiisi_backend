@@ -2,6 +2,7 @@ const { validationResult } = require('express-validator');
 
 const db = require('../queries');
 const { errorLogger, accessLogger } = require('../logger');
+const urlMetadata = require('url-metadata');
 
 const getResources = async (req, res) => {
     const userId = req.decoded.u_id;
@@ -10,6 +11,7 @@ const getResources = async (req, res) => {
     const filter = req.query.filter;
     const order = req.query.order;
     const reverse = req.query.reverse;
+
     // we are dangerously inserting values into a query so we need to make sure that
     // the order parameter is correct
     if (order !== 'popular' && order !== 'recent' && order !== 'title') {
@@ -44,7 +46,7 @@ const getResources = async (req, res) => {
         if (filter === 'none') {
             resources = await db.query(
                 `SELECT vc.vote, u.username, u.profile_pic, u.u_id,
-                r.votes, r.title, r.r_id, r.link, r.published_date, r.edited,
+                r.votes, r.title, r.r_id, r.link, r.published_date, r.edited, r.thumbnail,
                 c.tags, c.colors FROM resources r
                 JOIN users u ON r.author = u.u_id
                 LEFT JOIN (
@@ -59,7 +61,7 @@ const getResources = async (req, res) => {
         } else {
             resources = await db.query(
                 `SELECT vc.vote, u.username, u.profile_pic, u.u_id, 
-                r.votes, r.title, r.r_id, r.link, r.published_date, r.edited, 
+                r.votes, r.title, r.r_id, r.link, r.published_date, r.edited,  r.thumbnail,
                 c.tags, c.colors FROM resources r 
                 JOIN users u ON r.author = u.u_id 
                 JOIN (
@@ -194,10 +196,19 @@ const getResourceById = async (req, res) => {
     res.json(resource);
 };
 
-const addResource = async (req, res) => {
+const createResource = async (req, res) => {
 	const client = await db.connect();
 	const { title, description, link } = req.body;
 	const userId = req.decoded.u_id;
+	let md;
+	try {
+		 md = await urlMetadata(link);
+		 console.log(md);
+	 } catch (e) {
+		 md = '';
+	 }
+	let mdImage = md['og:image'];
+
 	let createdResource;
 	try {
 		await client.query('BEGIN');
@@ -206,15 +217,15 @@ const addResource = async (req, res) => {
 		);
 		t_id = t_id.rows[0].t_id;
 		createdResource = await client.query(
-			'WITH inserted as (' +
-				'INSERT INTO resources (title, description, link, commentthread, author) ' +
-				'VALUES ($1, $2, $3, $4, $5)' +
-				'RETURNING *) ' +
-				'SELECT i.r_id, i.title, ' +
-				'i.link, i.author, i.votes, i.published_date, i.commentthread, ' +
-				'u.profile_pic, u.username, u.u_id ' +
-				'FROM inserted i JOIN users u ON u.u_id = i.author WHERE u.u_id = $5',
-			[title, description, link, t_id, userId],
+			`WITH inserted as (
+				INSERT INTO resources (title, thumbnail, description, link, commentthread, author)
+				VALUES ($1, $2, $3, $4, $5, $6)
+				RETURNING *) 
+				SELECT i.r_id, i.title, i.thumbnail,
+				i.link, i.author, i.votes, i.published_date, i.commentthread, 
+				u.profile_pic, u.username, u.u_id 
+				FROM inserted i JOIN users u ON u.u_id = i.author WHERE u.u_id = $6`,
+			[title, mdImage, description, link, t_id, userId],
 		);
 		createdResource = { ...createdResource.rows[0], tags: [] };
 		await client.query('COMMIT');
@@ -456,7 +467,7 @@ exports.getResources = getResources;
 
 exports.getResourceById = getResourceById;
 
-exports.addResource = addResource;
+exports.createResource = createResource;
 
 exports.deleteResource = deleteResource;
 
