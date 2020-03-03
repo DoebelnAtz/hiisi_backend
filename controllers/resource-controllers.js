@@ -46,7 +46,7 @@ const getResources = async (req, res) => {
         if (filter === 'none') {
             resources = await db.query(
                 `SELECT vc.vote, u.username, u.profile_pic, u.u_id,
-                r.votes, r.title, r.r_id, r.link, r.published_date, r.edited, r.thumbnail,
+                r.votes, r.title, r.r_id, r.link, r.published_date, r.edited, r.thumbnail, r.resource_type,
                 c.tags, c.colors FROM resources r
                 JOIN users u ON r.author = u.u_id
                 LEFT JOIN (
@@ -61,7 +61,7 @@ const getResources = async (req, res) => {
         } else {
             resources = await db.query(
                 `SELECT vc.vote, u.username, u.profile_pic, u.u_id, 
-                r.votes, r.title, r.r_id, r.link, r.published_date, r.edited,  r.thumbnail,
+                r.votes, r.title, r.r_id, r.link, r.published_date, r.edited,  r.thumbnail, r.resource_type,
                 c.tags, c.colors FROM resources r 
                 JOIN users u ON r.author = u.u_id 
                 JOIN (
@@ -198,7 +198,7 @@ const getResourceById = async (req, res) => {
 
 const createResource = async (req, res) => {
 	const client = await db.connect();
-	const { title, description, link } = req.body;
+	const { title, description, link, type } = req.body;
 	const userId = req.decoded.u_id;
 	let md;
 	try {
@@ -218,14 +218,14 @@ const createResource = async (req, res) => {
 		t_id = t_id.rows[0].t_id;
 		createdResource = await client.query(
 			`WITH inserted as (
-				INSERT INTO resources (title, thumbnail, description, link, commentthread, author)
-				VALUES ($1, $2, $3, $4, $5, $6)
+				INSERT INTO resources (title, thumbnail, description, link, commentthread, author, resource_type)
+				VALUES ($1, $2, $3, $4, $5, $6, $7)
 				RETURNING *) 
-				SELECT i.r_id, i.title, i.thumbnail,
+				SELECT i.r_id, i.title, i.thumbnail, i.resource_type,
 				i.link, i.author, i.votes, i.published_date, i.commentthread, 
 				u.profile_pic, u.username, u.u_id 
 				FROM inserted i JOIN users u ON u.u_id = i.author WHERE u.u_id = $6`,
-			[title, mdImage, description, link, t_id, userId],
+			[title, mdImage, description, link, t_id, userId, type],
 		);
 		createdResource = { ...createdResource.rows[0], tags: [] };
 		await client.query('COMMIT');
