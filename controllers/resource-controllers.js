@@ -208,7 +208,13 @@ const createResource = async (req, res) => {
 		 md = '';
 	 }
 	let mdImage = md['og:image'];
-
+	// if og:image is a relative path we try to create a valid url for it
+    try {
+        new URL(mdImage);
+    } catch (e) {
+	    let newLink = new URL(link); // create a URL object from the provided link
+        mdImage = newLink.origin + mdImage; // take origin + path to image should give us a usable url, in most cases
+    }
 	let createdResource;
 	try {
 		await client.query('BEGIN');

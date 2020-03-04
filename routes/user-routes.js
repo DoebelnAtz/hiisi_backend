@@ -7,6 +7,11 @@ const router = express.Router();
 
 
 router.get(
+    '/all',
+    usersController.getAllByUserId
+);
+
+router.get(
     '/friends/:uid',
     usersController.getUserFriends
 );
@@ -37,9 +42,12 @@ router.get(
 );
 
 
+
 router.get(
     '/:pid',
     usersController.getUserById
 );
+
+
 
 module.exports = router;

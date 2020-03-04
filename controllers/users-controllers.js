@@ -269,7 +269,7 @@ const login = async (req, res, next) => {
 
     let existingUser;
     try {
-        existingUser = await db.query('SELECT username, u_id, password FROM users WHERE username = $1', [username]);
+        existingUser = await db.query('SELECT username, u_id, password FROM users WHERE username = $1', [username.toLowerCase()]);
         existingUser = existingUser.rows[0];
     } catch (e) {
         console.log(e);
@@ -387,6 +387,40 @@ const searchUsers = async (req, res) => {
     res.json(usersFound.map(user => user))
 };
 
+const getAllByUserId = async (req, res) => {
+    const page = req.query.page;
+    const userId = req.query.user;
+    const senderId =  req.decoded.u_id;
+    let userSubmissions;
+    try {
+        userSubmissions = await db.query(
+            `SELECT * FROM (
+            SELECT p.title, null AS thumbnail, p.votes, pv.vote, p.project_id as id, 'project' AS type, '/user' AS link
+            FROM projects p 
+            LEFT JOIN projectvotes pv ON pv.project_id = p.project_id AND pv.u_id = $2
+            WHERE p.creator = $1
+            UNION ALL 
+            SELECT r.title, r.thumbnail, r.votes, rv.vote, r.r_id AS id, 'resource' AS type, '/resources' AS link 
+            FROM resources r 
+            LEFT JOIN voteconnections rv ON r.r_id = rv.r_id AND rv.u_id = $2 
+            WHERE r.author = $1
+            UNION ALL 
+            SELECT b.title,  null AS thumbnail, b.votes, bv.vote, b.b_id AS id, 'post' AS type, '/forum' AS link 
+            FROM blogs b 
+            LEFT JOIN likedposts bv ON bv.b_id = b.b_id AND bv.u_id = $2
+            WHERE b.author =$1
+            ) AS res LIMIT 10 OFFSET $3`, [userId, senderId, page * 14]);
+        userSubmissions = userSubmissions.rows;
+    } catch(e) {
+        errorLogger.error('Failed to get user submissions: ' + e);
+        return res.status(500).json({
+            status: 'error',
+            message: 'Failed to get user submissions'
+        })
+    }
+    return res.json(userSubmissions);
+};
+
 exports.getMe = getMe;
 exports.getOnlineUsers = getOnlineUsers;
 exports.getUserFriends = getUserFriends;
@@ -394,4 +428,5 @@ exports.getUsers = getUsers;
 exports.getUserById = getUserById;
 exports.signUp = signUp;
 exports.login = login;
+exports.getAllByUserId = getAllByUserId;
 exports.searchUsers = searchUsers;
