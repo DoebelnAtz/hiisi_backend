@@ -388,28 +388,64 @@ const searchUsers = async (req, res) => {
 };
 
 const getAllByUserId = async (req, res) => {
-    const page = req.query.page;
-    const userId = req.query.user;
+    const page = req.query.page || 1;
     const senderId =  req.decoded.u_id;
+    const userId = req.query.user || senderId;
+
+    const order = req.query.order;
+    const reverse = req.query.reverse;
+
+    // we are dangerously inserting values into a query so we need to make sure that
+    // the order parameter is correct
+    if (order !== 'popular' && order !== 'recent' && order !== 'title') {
+        errorLogger.error('Failed to get resources: invalid order parameter');
+        return res.status(422).json({
+            status: 'error',
+            message: 'Failed to get resources',
+        });
+    }
+    let order1;
+    let order2;
+    let reverseOrder;
+    switch (order) {
+        case 'popular':
+            reverseOrder = reverse === 'true' ? 'ASC' : 'DESC';
+            order1 = `res.votes ${reverseOrder}`;
+            order2 = 'res.published_date DESC';
+            break;
+        case 'recent':
+            reverseOrder = reverse === 'true' ? 'ASC' : 'DESC';
+            order1 = `res.published_date ${reverseOrder}`;
+            order2 = 'res.votes DESC';
+            break;
+        default:
+            reverseOrder = reverse === 'true' ? 'DESC' : 'ASC';
+            order1 = `res.title ${reverseOrder}`;
+            order2 = 'res.published_date DESC';
+    }
+
     let userSubmissions;
     try {
         userSubmissions = await db.query(
             `SELECT * FROM (
-            SELECT p.title, null AS thumbnail, p.votes, pv.vote, p.project_id as id, 'project' AS type, '/user' AS link
+            SELECT p.title, null AS thumbnail, p.votes, pv.vote, p.published_date,
+            p.project_id as id, 'project' AS type, '/user' AS link
             FROM projects p 
             LEFT JOIN projectvotes pv ON pv.project_id = p.project_id AND pv.u_id = $2
             WHERE p.creator = $1
             UNION ALL 
-            SELECT r.title, r.thumbnail, r.votes, rv.vote, r.r_id AS id, 'resource' AS type, '/resources' AS link 
+            SELECT r.title, r.thumbnail, r.votes, rv.vote, r.published_date,
+            r.r_id AS id, 'resource' AS type, '/resources' AS link 
             FROM resources r 
             LEFT JOIN voteconnections rv ON r.r_id = rv.r_id AND rv.u_id = $2 
             WHERE r.author = $1
             UNION ALL 
-            SELECT b.title,  null AS thumbnail, b.votes, bv.vote, b.b_id AS id, 'post' AS type, '/forum' AS link 
+            SELECT b.title,  null AS thumbnail, b.votes, bv.vote, b.published_date,
+            b.b_id AS id, 'post' AS type, '/forum' AS link 
             FROM blogs b 
             LEFT JOIN likedposts bv ON bv.b_id = b.b_id AND bv.u_id = $2
             WHERE b.author =$1
-            ) AS res LIMIT 10 OFFSET $3`, [userId, senderId, page * 14]);
+            ) AS res ORDER BY ${order1}, ${order2} LIMIT $3 OFFSET $4`, [userId, senderId, page * 14, (page - 1) * 14]);
         userSubmissions = userSubmissions.rows;
     } catch(e) {
         errorLogger.error('Failed to get user submissions: ' + e);
