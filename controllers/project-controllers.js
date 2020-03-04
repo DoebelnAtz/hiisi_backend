@@ -18,10 +18,13 @@ const addTaskToBoard = async (req, res) => {
 	let createdTask;
 	try {
 		await client.query('BEGIN');
+		let commentThread = await client.query(`
+			INSERT INTO commentthreads DEFAULT VALUES RETURNING *
+		`);
 		createdTask = await client.query(
-			'INSERT INTO tasks (title, column_id) VALUES ($1, $2)' +
-				'RETURNING task_id, title, priority, description',
-			[taskTitle, taskColumnId],
+			'INSERT INTO tasks (title, column_id, commentthread) VALUES ($1, $2, $3)' +
+				'RETURNING task_id, title, priority, description, status',
+			[taskTitle, taskColumnId, commentThread.rows[0].t_id],
 		);
 		createdTask = createdTask.rows[0];
 		await client.query(
@@ -676,7 +679,7 @@ const getTaskById = async (req, res) => {
 	let task;
 	try {
 		task = await db.query(
-			'SELECT t.priority, t.description, t.status, t.color_tag, t.task_id, t.title, t.column_id FROM tasks t ' +
+			'SELECT t.priority, t.description, t.commentthread, t.status, t.color_tag, t.task_id, t.title, t.column_id FROM tasks t ' +
 				'WHERE t.task_id = $1',
 			[taskId],
 		);
