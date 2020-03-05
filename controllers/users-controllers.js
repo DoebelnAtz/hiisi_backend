@@ -445,7 +445,7 @@ const getAllByUserId = async (req, res) => {
             FROM blogs b 
             LEFT JOIN likedposts bv ON bv.b_id = b.b_id AND bv.u_id = $2
             WHERE b.author =$1
-            ) AS res ORDER BY ${order1}, ${order2} LIMIT $3 OFFSET $4`, [userId, senderId, page * 14, (page - 1) * 14]);
+            ) AS res ORDER BY ${order1}, ${order2} LIMIT $3 OFFSET $4`, [userId, senderId, 14, (page - 1) * 14]);
         userSubmissions = userSubmissions.rows;
     } catch(e) {
         errorLogger.error('Failed to get user submissions: ' + e);

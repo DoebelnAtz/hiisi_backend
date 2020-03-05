@@ -303,7 +303,7 @@ const getProjects = async (req, res) => {
 			order1 = `p.title ${reverseOrder}`;
 			order2 = 'p.published_date DESC';
 	}
-
+	const perPage = 14;
 	let projects;
 	try {
 		projects = await db.query(
@@ -318,7 +318,7 @@ const getProjects = async (req, res) => {
 			JOIN projectcollaborators pc ON pc.u_id = cu.u_id GROUP BY pc.project_id
 			) collab ON collab.project_id = p.project_id
 			ORDER BY ${order1}, ${order2} LIMIT $2 OFFSET $3`,
-			[userId, Number(page) * 14, Number(page - 1) * 14],
+			[userId, perPage, (page - 1) * perPage],
 		);
 		projects = projects.rows;
 	} catch (e) {

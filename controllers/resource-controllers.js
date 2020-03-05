@@ -3,6 +3,7 @@ const { validationResult } = require('express-validator');
 const db = require('../queries');
 const { errorLogger, accessLogger } = require('../logger');
 const urlMetadata = require('url-metadata');
+var URL = require('url').URL;
 
 const getResources = async (req, res) => {
     const userId = req.decoded.u_id;
@@ -40,8 +41,8 @@ const getResources = async (req, res) => {
             order1 = `r.title ${reverseOrder}`;
             order2 = 'r.published_date DESC';
     }
-
     let resources;
+    const perPage = 14;
     try {
         if (filter === 'none') {
             resources = await db.query(
@@ -56,7 +57,7 @@ const getResources = async (req, res) => {
                 GROUP BY c.r_id) c using (r_id) 
                 LEFT JOIN voteconnections vc ON vc.r_id = r.r_id AND vc.u_id = $1 
                 ORDER BY ${order1}, ${order2} LIMIT $2 OFFSET $3`,
-                [userId, Number(page) * 14, Number(page - 1) * 14],
+                [userId, perPage, (page - 1) * perPage],
             );
         } else {
             resources = await db.query(
@@ -72,7 +73,7 @@ const getResources = async (req, res) => {
                 LEFT JOIN voteconnections vc ON vc.r_id = r.r_id 
                 AND vc.u_id = $2 WHERE $1 = ANY (tags) 
                 ORDER BY ${order1}, ${order2} LIMIT $3 OFFSET $4`,
-                [filter, userId, Number(page) * 14, Number(page - 1) * 14],
+                [filter, userId, perPage, (page - 1) * perPage],
             );
         }
 
@@ -86,7 +87,6 @@ const getResources = async (req, res) => {
             message: 'Failed to get resources',
         });
     }
-    let tags;
     res.json(resources);
 };
 
@@ -209,6 +209,7 @@ const createResource = async (req, res) => {
 	 }
 	let mdImage = md['og:image'];
 	// if og:image is a relative path we try to create a valid url for it
+
     if (mdImage) {
         try {
             new URL(mdImage);
