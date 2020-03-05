@@ -52,11 +52,20 @@ router.post(
     projectControllers.addProjectCollaborator
 );
 
+router.delete(
+	'/delete_project',
+    [
+        check('projectId')
+            .not()
+            .isEmpty()
+            .isNumeric(),
+    ],
+	projectControllers.deleteProject
+);
+
 router.get('/boards/tasks/:tid', projectControllers.getTaskById);
 
 router.get('/collaborators', projectControllers.getProjectCollaborators);
-
-
 
 router.get('/:pid', projectControllers.getProjectById);
 
@@ -143,5 +152,6 @@ router.delete(
     ],
 	projectControllers.deleteTask
 );
+
 
 module.exports = router;

@@ -17,6 +17,8 @@ router.get('/users/:uid', blogsController.getBlogsByUserId);
 
 router.get('/commentthread/:tid', commentController.getCommentThreadById);
 
+router.delete('/comment/delete_comment', commentController.deleteComment);
+
 router.put('/update_blog', blogsController.updateBlog);
 
 router.post(

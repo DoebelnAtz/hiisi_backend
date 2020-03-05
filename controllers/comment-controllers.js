@@ -144,5 +144,66 @@ const createComment = async (req, res) => {
 	res.status(201).json({ ...createdComment.rows[0], username: req.decoded.username, profile_pic: `https://cdn.intra.42.fr/users/medium_${req.decoded.username}.jpg` });
 };
 
+const deleteComment = async (req,res) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+        return res.status(422).json({
+            status: 'error',
+            message: 'Invalid inputs passed, please check your data.',
+        });
+    }
+    const { commentId } = req.body;
+    let commentToDelete;
+    try {
+        commentToDelete = await db.query(`
+            SELECT c_id, author FROM comments WHERE c_id = $1
+        `, [commentId]);
+        commentToDelete = commentToDelete.rows;
+        if (!commentToDelete.rows.length) {
+            errorLogger.error('Failed to find comment with the provided Id');
+            return res.status(404).json({
+                status: 'error',
+                message: 'Failed to find comment with the provided Id'
+            })
+        } else {
+            commentToDelete = commentToDelete[0];
+        }
+        if (commentToDelete.author !== req.decoded.u_id) {
+            errorLogger.error('You are not the author of this comment');
+            return res.status(403).json({
+                status: 'error',
+                message: 'You are not the author of this comment'
+            })
+        }
+    } catch(e) {
+        errorLogger.error('Failed to delete comment: ' + e);
+        return res.status(500).json({
+            status: 'error',
+            message: 'Failed to delete comment'
+        })
+    }
+    const client = await db.connect();
+
+    try{
+        await client.query('BEGIN');
+        await client.query(`
+            UPDATE comments SET author = null, commentcontent = 'deleted' WHERE c_id = $1 
+        `, [commentId]);
+        await client.query('COMMIT');
+    } catch (e) {
+        await client.query('ROLLBACK');
+        errorLogger.error('Failed to delete comment: ' + e);
+        return res.status(500).json({
+            success: false,
+            status: 'error',
+            message: 'Failed to delete comment'
+        })
+    } finally {
+        client.release();
+    }
+    res.json({success: true})
+};
+
+exports.deleteComment = deleteComment;
 exports.getCommentThreadById = getCommentThreadById;
 exports.createComment = createComment;

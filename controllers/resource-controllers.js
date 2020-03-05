@@ -209,11 +209,20 @@ const createResource = async (req, res) => {
 	 }
 	let mdImage = md['og:image'];
 	// if og:image is a relative path we try to create a valid url for it
-    try {
-        new URL(mdImage);
-    } catch (e) {
-	    let newLink = new URL(link); // create a URL object from the provided link
-        mdImage = newLink.origin + mdImage; // take origin + path to image should give us a usable url, in most cases
+    if (mdImage) {
+        try {
+            new URL(mdImage);
+        } catch (e) {
+            let newLink = new URL(link); // create a URL object from the provided link
+            mdImage = newLink.origin + mdImage; // take origin + path to image should give us a usable url, in most cases
+            try {
+                new URL(mdImage)
+            } catch (e) {
+                mdImage = null;
+            }
+        }
+    } else {
+        mdImage = null;
     }
 	let createdResource;
 	try {
@@ -237,12 +246,21 @@ const createResource = async (req, res) => {
 		await client.query('COMMIT');
 	} catch (e) {
 		await client.query('ROLLBACK');
-		errorLogger.error('Failed to add Resource to DB: ' + e);
-		return res.status(500).json({
-			success: false,
-			status: 'error',
-			message: 'Failed to add Resource to DB.',
-		});
+		errorLogger.error('Failed to add Resource to DB: ' + e + e.code + e.code);
+		if (e.code === '23505') {
+			return res.status(400).json({
+				success: false,
+				status:'error',
+				message: 'Title already exists'
+			})
+		}
+		else {
+            return res.status(500).json({
+                success: false,
+                status: 'error',
+                message: 'Failed to add Resource to DB.',
+            });
+		}
 	} finally {
 		client.release();
 	}

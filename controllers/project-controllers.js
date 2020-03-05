@@ -650,14 +650,14 @@ const deleteTask = async(req,res) => {
         await client.query(
             'DELETE FROM taskcollaborators ' +
             'WHERE task_id = $1', [taskId]);
+        await client.query(`
+            DELETE FROM tasks WHERE task_id = $1
+        `,[taskId]);
         if (targetTask.commentthread) {
             await client.query(`
                 DELETE FROM commentthreads WHERE t_id = $1
             `, [targetTask.commentthread])
         }
-        await client.query(`
-            DELETE FROM tasks WHERE task_id = $1
-        `,[taskId]);
         await client.query('COMMIT');
     } catch (e) {
         await client.query('ROLLBACK');
@@ -706,15 +706,15 @@ const getTaskById = async (req, res) => {
 };
 
 const addProjectCollaborator = async (req, res) => {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-        return res.status(422).json({
-            status: 'error',
-            message: 'Invalid input please try again.',
-        });
-    }
+		const errors = validationResult(req);
+		if (!errors.isEmpty()) {
+			return res.status(422).json({
+				status: 'error',
+				message: 'Invalid input please try again.',
+			});
+		}
 
-    const { userId, projectId } = req.body;
+		const { userId, projectId } = req.body;
     const senderId = req.decoded.u_id;
 
     let targetUser;
@@ -788,6 +788,66 @@ const addProjectCollaborator = async (req, res) => {
     res.json(targetUser)
 };
 
+const deleteProject = async (req, res) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+        return res.status(422).json({
+            status: 'error',
+            message: 'Invalid input please try again.',
+        });
+    }
+	const senderId  = req.decoded.u_id;
+    const { projectId } = req.body;
+    let targetProject;
+    try {
+        targetProject = await db.query(`
+        	SELECT from PROJECTS WHERE project_id = $1 AND creator = $2
+        `, [projectId, senderId]);
+        targetProject = targetProject.rows;
+        if (!targetProject.length) {
+            errorLogger.error('Failed to delete project: Couldn\'t find project with the provided id.');
+            return res.status(404).json({
+                status: 'error',
+                message: 'Failed to delete project: Couldn\'t find project with the provided id'
+            })
+		} else {
+        	targetProject = targetProject[0];
+        }
+    } catch(e) {
+        errorLogger.error('Failed to delete project: ' + e);
+        return res.status(500).json({
+            status: 'error',
+            message: 'Failed to delete project'
+        })
+    }
+    const client = await db.connect();
+
+    try{
+        await client.query('BEGIN');
+        if (targetProject.t_id) {
+            await client.query(`
+                DELETE FROM threads WHERE t_id = $1
+            `, targetProject.t_id)
+        }
+        await client.query(`
+            DELETE FROM projects WHERE project_id = $1
+        `, [projectId]);
+        await client.query('COMMIT');
+    } catch (e) {
+        await client.query('ROLLBACK');
+        errorLogger.error('Failed to delete project: ' + e);
+        return res.status(500).json({
+            success: false,
+            status: 'error',
+            message: 'Failed to delete project.'
+        })
+    } finally {
+        client.release();
+    }
+    res.json({success: true})
+};
+
+exports.deleteProject = deleteProject;
 exports.addTaskToBoard = addTaskToBoard;
 exports.updateTask = updateTask;
 exports.createProject = createProject;
