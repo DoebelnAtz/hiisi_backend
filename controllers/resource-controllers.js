@@ -158,10 +158,11 @@ const getResourceById = async (req, res) => {
     let resource;
     try {
         resource = await db.query(
-            'SELECT r.r_id, r.title, r.link, r.description, r.author, r.votes, r.published_date, r.commentthread, ' +
-            'u.profile_pic, u.u_id, u.username ' +
-            'FROM resources r JOIN users u ON u.u_id = r.author ' +
-            'WHERE r.r_id = $1',
+            `SELECT r.r_id, r.title, r.link, r.description, 
+            r.author, r.votes, r.published_date, r.commentthread, r.thumbnail, 
+            u.profile_pic, u.u_id, u.username 
+            FROM resources r JOIN users u ON u.u_id = r.author 
+            WHERE r.r_id = $1`,
             [resourceId],
         );
         resource = {
