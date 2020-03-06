@@ -1,5 +1,5 @@
 const express = require('express');
-const usersController = require('../controllers/users-controllers');
+const authController = require('../controllers/auth-controllers');
 const { check } = require('express-validator');
 const router = express.Router();
 
@@ -11,7 +11,7 @@ router.post(
             .isEmpty(),
         check('password').isLength({ min: 8 })
     ],
-    usersController.signUp
+    authController.signUp
 );
 
 router.put(
@@ -30,7 +30,7 @@ router.put(
             .isString()
             .isLength({ min: 8 }),
     ],
-    usersController.changePassword
+    authController.changePassword
 );
 
 router.post(
@@ -43,7 +43,12 @@ router.post(
             .not()
             .isEmpty(),
     ],
-    usersController.login
+    authController.login
+);
+
+router.post(
+    '/refresh_token',
+    authController.refreshToken
 );
 
 module.exports = router;
