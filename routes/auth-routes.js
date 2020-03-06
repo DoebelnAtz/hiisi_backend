@@ -9,9 +9,28 @@ router.post(
         check('username')
             .not()
             .isEmpty(),
-        check('password').isLength({ min: 6 })
+        check('password').isLength({ min: 8 })
     ],
     usersController.signUp
+);
+
+router.put(
+    '/change_password',
+    [
+        check('username')
+            .not()
+            .isEmpty(),
+        check('currentPassword')
+            .not()
+            .isEmpty()
+            .isString(),
+        check('newPassword')
+            .not()
+            .isEmpty()
+            .isString()
+            .isLength({ min: 8 }),
+    ],
+    usersController.changePassword
 );
 
 router.post(

@@ -340,6 +340,80 @@ const login = async (req, res, next) => {
     });
 };
 
+const changePassword = async (req, res) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+        return res.status(422).json({
+            status: 'error',
+            message: 'Invalid input please try again.',
+        });
+    }
+
+    const { currentPassword, username, newPassword  } = req.body;
+
+    let userToUpdate;
+    try {
+        userToUpdate = await db.query(`
+            SELECT username, u_id, password FROM users WHERE username = $1
+        `, [username]);
+        userToUpdate = userToUpdate.rows[0];
+    } catch(e) {
+        errorLogger.error('Failed to change password: ' + e);
+        return res.status(500).json({
+            status: 'error',
+            message: 'Failed to change password'
+        })
+    }
+    let isValidPass = false;
+    try {
+        isValidPass = await bcrypt.compare(currentPassword, userToUpdate.password)
+    } catch (e) {
+        errorLogger.error('Failed to change password: b-crypt comparison failed: ' + e);
+        return res.status(500).json({
+            status: 'error',
+            message: 'Failed to change password, please try again later.'
+        })
+    }
+    if (!isValidPass) {
+        return res.status(401).json({
+            status: 'error',
+            message: 'Invalid credentials, please try again.'
+        })
+    }
+
+    let hashedPassword;
+    try {
+        hashedPassword = await bcrypt.hash(newPassword, 10);
+    } catch (e) {
+        errorLogger.error('Failed to change password: b-crypt hash failed: ' + e);
+
+        return res.status(500).json({
+            status: 'error',
+            message: 'Failed to change password, please try again later.'
+        })
+    }
+    const client = await db.connect();
+
+    try{
+        await client.query('BEGIN');
+        await client.query(`
+            UPDATE users SET password = $1 WHERE username = $2
+        `, [hashedPassword, username]);
+        await client.query('COMMIT');
+    } catch (e) {
+        await client.query('ROLLBACK');
+        errorLogger.error(': ' + e);
+        return res.status().json({
+            success: false,
+            status: 'error',
+            message: '.'
+        })
+    } finally {
+        client.release();
+    }
+    res.json({success: true})
+};
+
 const getOnlineUsers = async (req, res) => {
     let users;
 
@@ -464,5 +538,6 @@ exports.getUsers = getUsers;
 exports.getUserById = getUserById;
 exports.signUp = signUp;
 exports.login = login;
+exports.changePassword = changePassword;
 exports.getAllByUserId = getAllByUserId;
 exports.searchUsers = searchUsers;
