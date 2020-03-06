@@ -201,7 +201,7 @@ const getAllByUserId = async (req, res) => {
     const page = req.query.page || 1;
     const senderId =  req.decoded.u_id;
     const userId = req.query.user || senderId;
-
+    const filter = req.query.filter;
     const order = req.query.order;
     const reverse = req.query.reverse;
 
@@ -233,11 +233,12 @@ const getAllByUserId = async (req, res) => {
             order1 = `res.title ${reverseOrder}`;
             order2 = 'res.published_date DESC';
     }
-
+    console.log(filter);
     let userSubmissions;
     try {
-        userSubmissions = await db.query(
-            `SELECT * FROM (
+        if (filter === 'none') {
+            userSubmissions = await db.query(
+                `SELECT * FROM (
             SELECT p.title, null AS thumbnail, p.votes, pv.vote, p.published_date,
             p.project_id as id, 'project' AS type, '/user' AS link
             FROM projects p 
@@ -256,6 +257,20 @@ const getAllByUserId = async (req, res) => {
             LEFT JOIN likedposts bv ON bv.b_id = b.b_id AND bv.u_id = $2
             WHERE b.author =$1
             ) AS res ORDER BY ${order1}, ${order2} LIMIT $3 OFFSET $4`, [userId, senderId, 14, (page - 1) * 14]);
+        } else {
+            // Messy query, might be better to just do a switch / case..
+            const table = filter === 'posts' ? 'blogs' : filter === 'resources' ? filter : 'projects';
+            const votes = filter === 'posts' ? 'likedposts' : filter === 'resources' ? 'voteconnections'  : 'projectvotes';
+            const id = filter === 'posts' ? 'b_id' : filter === 'resources' ? 'r_id' : 'project_id';
+            userSubmissions = await db.query(
+                `SELECT * FROM (
+            SELECT title, ${table === 'resources' ? 'thumbnail' : 'null'} AS thumbnail, votes, vote, published_date,
+            t.${id} as id, '${filter.slice(0, filter.length - 1)}' AS type, '/${filter}' AS link
+            FROM ${table} t
+            LEFT JOIN ${votes} tv ON tv.${id} = t.${id} AND tv.u_id = $2
+            WHERE t.${table === 'projects' ? 'creator' : 'author'} = $1
+            ) AS res ORDER BY ${order1}, ${order2} LIMIT $3 OFFSET $4`, [userId, senderId, 14, (page - 1) * 14]);
+        }
         userSubmissions = userSubmissions.rows;
     } catch(e) {
         errorLogger.error('Failed to get user submissions: ' + e);
