@@ -240,7 +240,7 @@ const getAllByUserId = async (req, res) => {
             userSubmissions = await db.query(
                 `SELECT * FROM (
             SELECT p.title, null AS thumbnail, p.votes, pv.vote, p.published_date,
-            p.project_id as id, 'project' AS type, '/user' AS link
+            p.project_id as id, 'project' AS type, '/projects' AS link
             FROM projects p 
             LEFT JOIN projectvotes pv ON pv.project_id = p.project_id AND pv.u_id = $2
             WHERE p.creator = $1
