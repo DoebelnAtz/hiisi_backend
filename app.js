@@ -3,8 +3,8 @@ const bodyParser = require('body-parser');
 const cors = require('cors');
 let middleware = require('./middleware');
 const app = express();
+require('dotenv').config();
 app.listen(5000);
-
 const io = require('socket.io')(5010, {
     handlePreflightRequest: function (req, res) {
         var headers = { // socket cors headers
@@ -19,7 +19,6 @@ const io = require('socket.io')(5010, {
 io.origins('*:*'); // allow all request origins for sockets
 
 const schedule = require('node-schedule');
-
 const authRoutes = require('./routes/auth-routes');
 const userRoutes = require('./routes/user-routes');
 const notificationRoutes = require('./routes/notification-routes');

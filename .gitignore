@@ -2,3 +2,4 @@
 /logs/access.log
 /logs/error.log
 users.json
+.env
