@@ -3,13 +3,13 @@ const bodyParser = require('body-parser');
 const cors = require('cors');
 let middleware = require('./middleware');
 const app = express();
-app.listen(5000);
+app.listen(5042);
 
 const io = require('socket.io')(5010, {
     handlePreflightRequest: function (req, res) {
         var headers = { // socket cors headers
             'Access-Control-Allow-Headers': 'Content-Type, Authorization, Room',
-            'Access-Control-Allow-Origin': 'http://localhost:3000',
+            'Access-Control-Allow-Origin': req.headers.origin,
             'Access-Control-Allow-Credentials': true
         };
         res.writeHead(200, headers);
