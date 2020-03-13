@@ -270,11 +270,10 @@ const getBoardById = async (req, res) => {
 };
 
 const getProjects = async (req, res) => {
-	const page = req.query.page;
+	const page = req.query.page || 1;
 	const userId = req.decoded.u_id;
-	const filter = req.query.filter;
-	const order = req.query.order;
-	const reverse = req.query.reverse;
+	const order = req.query.order || 'popular';
+	const reverse = req.query.reverse || 'false';
 	// we are dangerously inserting values into a query so we need to make sure that
 	// the order parameter is correct
 	if (order !== 'popular' && order !== 'recent' && order !== 'title') {

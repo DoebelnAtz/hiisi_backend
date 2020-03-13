@@ -8,10 +8,10 @@ var URL = require('url').URL;
 const getResources = async (req, res) => {
     const userId = req.decoded.u_id;
 
-    const page = req.query.page;
-    const filter = req.query.filter;
-    const order = req.query.order;
-    const reverse = req.query.reverse;
+    const page = req.query.page || 1;
+    const filter = req.query.filter || 'none';
+    const order = req.query.order || 'popular';
+    const reverse = req.query.reverse || 'false';
 
     // we are dangerously inserting values into a query so we need to make sure that
     // the order parameter is correct

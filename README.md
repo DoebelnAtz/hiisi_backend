@@ -41,6 +41,11 @@
     
     get blogs
     
+    required query params: 
+         page (def: 1)
+         order (def: popular)
+         reverse (def: false)
+    
     
 
     GET: /:bid
@@ -105,6 +110,10 @@
 
     get projects
     
+    required query params: 
+         page (def: 1)
+         order (def: popular)
+         reverse (def: false)
     
     
     POST: /boards/save_board
@@ -198,6 +207,19 @@
     returns user based on given string
     
     required query param: q (search string)
+    
+    
+    
+    GET: /all
+    
+    returns all projects, posts and resources for the provided userId
+    
+    required query params: 
+         userId (defaults to sender id),
+         page (def: 1)
+         filter (def: none)
+         order (def: popular)
+         reverse (def: false)
  
 # messages
 
@@ -241,7 +263,11 @@
     
     get resources:
     
-    required params: page, filted, order, reverse
+    required query params: 
+         page (def: 1)
+         filter (def: none)
+         order (def: popular)
+         reverse (def: false)
     
     
     

@@ -4,8 +4,8 @@ const cors = require('cors');
 let middleware = require('./middleware');
 const app = express();
 require('dotenv').config();
-app.listen(5000);
-const io = require('socket.io')(5010, {
+app.listen(process.env.PORT || 5000);
+const io = require('socket.io')(process.env.SOCKET_PORT || 5010, {
     handlePreflightRequest: function (req, res) {
         var headers = { // socket cors headers
             'Access-Control-Allow-Headers': 'Content-Type, Authorization, Room',
