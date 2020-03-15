@@ -1,7 +1,7 @@
 const api = require('../scheduled-jobs/api');
 const { validationResult } = require('express-validator');
 const bcrypt = require('bcryptjs');
-const db = require('../queries');
+const db = require('../postgres/queries');
 const { errorLogger } = require('../logger');
 const dbUsers = require('../db-utils/db-user');
 let jwt = require('jsonwebtoken');

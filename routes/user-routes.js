@@ -32,11 +32,6 @@ router.get(
 );
 
 router.get(
-    '/api',
-    () => api.intraApi('/users/61979')
-);
-
-router.get(
     '/search',
     usersController.searchUsers
 );

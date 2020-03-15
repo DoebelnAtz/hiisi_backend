@@ -1,5 +1,5 @@
 const api = require('./api');
-const db = require('../queries');
+const db = require('../postgres/queries');
 const {accessLogger, errorLogger} = require('../logger');
 const utils = require('../utils/utils');
 

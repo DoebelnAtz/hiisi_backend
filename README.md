@@ -24,7 +24,7 @@
 
     signup
     
-    required: username, intraId, password
+    required: username, password
     
     
 
@@ -173,6 +173,14 @@
     updates position of task in a board
     
     required: column_id, task_id field
+    
+    
+    
+    DELETE: /projects/delete_project
+    
+    deletes the project and chat thread for project
+    
+    required: projectId
     
     
     

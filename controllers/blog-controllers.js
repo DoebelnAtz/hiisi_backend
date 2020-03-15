@@ -1,6 +1,6 @@
 const { validationResult } = require('express-validator');
 const { errorLogger } = require('../logger');
-const db = require('../queries');
+const db = require('../postgres/queries');
 
 const getBlogs = async (req, res) => {
 	let sender;

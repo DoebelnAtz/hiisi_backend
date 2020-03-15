@@ -1,6 +1,6 @@
 const { validationResult } = require('express-validator');
 const { errorLogger, accessLogger } = require('../logger');
-const db = require('../queries');
+const db = require('../postgres/queries');
 const dbNotifications = require('../db-utils/db-notifications');
 
 

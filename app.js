@@ -1,7 +1,7 @@
 const express = require('express');
 const bodyParser = require('body-parser');
 const cors = require('cors');
-let middleware = require('./middleware');
+let middleware = require('./middleware/middleware');
 const app = express();
 require('dotenv').config();
 app.listen(process.env.PORT || 5000);
