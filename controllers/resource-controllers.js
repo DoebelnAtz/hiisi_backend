@@ -248,9 +248,9 @@ const createResource = async (req, res) => {
 		await client.query('COMMIT');
 	} catch (e) {
 		await client.query('ROLLBACK');
-		errorLogger.error('Failed to add Resource to DB: ' + e + e.code + e.code);
+		errorLogger.error('Failed to add Resource to DB: ' + e + e.code);
 		if (e.code === '23505') {
-			return res.status(400).json({
+			res.status(400).json({
 				success: false,
 				status:'error',
 				message: 'Title already exists'
