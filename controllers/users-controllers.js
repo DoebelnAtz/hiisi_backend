@@ -270,7 +270,7 @@ const getAllByUserId = async (req, res) => {
             case 'resources':
                 userSubmissions = await db.query(`
                 SELECT * FROM (
-                SELECT r.title, r.votes, v.vote, r.published_Date, 'resource' AS type, '/resources' AS link, r.r_id AS id 
+                SELECT r.title, r.votes, v.vote, r.published_Date, r.thumbnail, 'resource' AS type, '/resources' AS link, r.r_id AS id 
                 FROM resources r LEFT JOIN voteconnections v ON r.r_id = v.r_id AND v.u_id = $2 WHERE r.author = $1
                 ) AS res ORDER BY ${order1}, ${order2} LIMIT $3 OFFSET $4`,
                     [userId, senderId, 14, (page - 1) * 14]);
