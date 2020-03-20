@@ -1,6 +1,6 @@
 let jwt = require('jsonwebtoken');
-const config = require('./config.js');
-const accessLogger = require('./logger').accessLogger;
+const config = require('../config.js');
+const accessLogger = require('../logger').accessLogger;
 
 let checkToken = (req, res, next) => {
     let token = req.headers['x-access-token'] || req.headers['authorization'];

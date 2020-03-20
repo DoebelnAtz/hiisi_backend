@@ -1,13 +1,14 @@
 const { validationResult } = require('express-validator');
 const { errorLogger } = require('../logger');
-const db = require('../queries');
+const db = require('../postgres/queries');
 
 const getBlogs = async (req, res) => {
 	let sender;
 	const senderId = req.decoded.u_id; // get sender id from decoded token
-	let order = req.query.order;
-	let pagination = req.query.page;
-	let reverse = req.query.reverse;
+	let order = req.query.order || 'popular';
+	let pagination = req.query.page || 1;
+	let reverse = req.query.reverse || 'false';
+
 	if (order !== 'popular' && order !== 'recent' && order !== 'title') {
 		errorLogger.error('Failed to get blogs: invalid order parameter');
 		return res.status(422).json({

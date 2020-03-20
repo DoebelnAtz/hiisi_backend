@@ -1,5 +1,5 @@
 const pg = require('pg');
-const logger = require('./logger');
+const logger = require('../logger');
 
 const pool = new pg.Pool ({
     user: 'admin',

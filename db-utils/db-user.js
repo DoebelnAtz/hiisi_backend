@@ -1,4 +1,4 @@
-const db = require('../queries');
+const db = require('../postgres/queries');
 
 const createUser = async (userObj, res) => {
 

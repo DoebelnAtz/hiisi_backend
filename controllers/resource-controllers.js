@@ -1,6 +1,6 @@
 const { validationResult } = require('express-validator');
 
-const db = require('../queries');
+const db = require('../postgres/queries');
 const { errorLogger, accessLogger } = require('../logger');
 const urlMetadata = require('url-metadata');
 var URL = require('url').URL;
@@ -8,10 +8,10 @@ var URL = require('url').URL;
 const getResources = async (req, res) => {
     const userId = req.decoded.u_id;
 
-    const page = req.query.page;
-    const filter = req.query.filter;
-    const order = req.query.order;
-    const reverse = req.query.reverse;
+    const page = req.query.page || 1;
+    const filter = req.query.filter || 'none';
+    const order = req.query.order || 'popular';
+    const reverse = req.query.reverse || 'false';
 
     // we are dangerously inserting values into a query so we need to make sure that
     // the order parameter is correct
@@ -248,9 +248,9 @@ const createResource = async (req, res) => {
 		await client.query('COMMIT');
 	} catch (e) {
 		await client.query('ROLLBACK');
-		errorLogger.error('Failed to add Resource to DB: ' + e + e.code + e.code);
+		errorLogger.error('Failed to add Resource to DB: ' + e + e.code);
 		if (e.code === '23505') {
-			return res.status(400).json({
+			res.status(400).json({
 				success: false,
 				status:'error',
 				message: 'Title already exists'

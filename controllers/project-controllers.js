@@ -1,6 +1,6 @@
 const { validationResult } = require('express-validator');
 const { errorLogger } = require('../logger');
-const db = require('../queries');
+const db = require('../postgres/queries');
 
 const addTaskToBoard = async (req, res) => {
 	const errors = validationResult(req);
@@ -73,7 +73,7 @@ const createProject = async (req, res) => {
 		});
 	}
 	const userId = req.decoded.u_id;
-	const { title, link, description } = req.body;
+	const { title, link, description, private } = req.body;
 
 	let createdProject;
 	const client = await db.connect();
@@ -92,9 +92,9 @@ const createProject = async (req, res) => {
 		chatthread = chatthread.rows[0];
 		createdProject = await client.query(
 			`INSERT INTO projects 
-			(title, description, link, t_id, commentthread, creator) 
-			VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
-			[title, description, link, chatthread.t_id, commentthread.t_id, userId],
+			(title, description, link, t_id, commentthread, creator, private) 
+			VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
+			[title, description, link, chatthread.t_id, commentthread.t_id, userId, private],
 		);
 		createdProject = createdProject.rows[0];
 		let board = await client.query(
@@ -141,7 +141,14 @@ const createProject = async (req, res) => {
 		await client.query('COMMIT');
 	} catch (e) {
 		await client.query('ROLLBACK');
-		errorLogger.error('Failed to create project: ' + e);
+		errorLogger.error(`Failed to create project: ${e} | Err: ${e.code}`);
+		if (e.code === '23505') {
+			return res.status(400).json({
+				success: false,
+				status:'error',
+				message: 'Title already exists'
+			})
+		}
 		return res.status(500).json({
 			success: false,
 			status: 'error',
@@ -270,11 +277,10 @@ const getBoardById = async (req, res) => {
 };
 
 const getProjects = async (req, res) => {
-	const page = req.query.page;
+	const page = req.query.page || 1;
 	const userId = req.decoded.u_id;
-	const filter = req.query.filter;
-	const order = req.query.order;
-	const reverse = req.query.reverse;
+	const order = req.query.order || 'popular';
+	const reverse = req.query.reverse || 'false';
 	// we are dangerously inserting values into a query so we need to make sure that
 	// the order parameter is correct
 	if (order !== 'popular' && order !== 'recent' && order !== 'title') {
@@ -313,10 +319,10 @@ const getProjects = async (req, res) => {
 			LEFT JOIN (SELECT vote, project_id FROM projectvotes WHERE u_id = $1) v 
 			ON v.project_id = p.project_id 
 			LEFT JOIN (
-			SELECT pc.project_id, array_agg(cu.profile_pic) AS collaborators 
+			SELECT pc.project_id, array_agg(cu.profile_pic) AS collaborators, array_agg(cu.u_id) AS auth_users 
 			FROM users cu 
 			JOIN projectcollaborators pc ON pc.u_id = cu.u_id GROUP BY pc.project_id
-			) collab ON collab.project_id = p.project_id
+			) collab ON collab.project_id = p.project_id WHERE $1 = ANY (auth_users) OR p.private = false
 			ORDER BY ${order1}, ${order2} LIMIT $2 OFFSET $3`,
 			[userId, perPage, (page - 1) * perPage],
 		);
@@ -340,7 +346,7 @@ const getProjectById = async (req, res) => {
 	try {
 		project = await db.query(
 			`SELECT p.title, p.commentthread, p.creator,
-				b.board_id, p.project_id, p.votes, p.t_id, 
+				b.board_id, p.project_id, p.votes, p.t_id, p.private,
 				p.description, p.link, p.published_date
 				FROM projects p JOIN boards b 
 				ON b.project_id = p.project_id AND p.project_id = $1`,
@@ -409,15 +415,15 @@ const updateProject = async (req, res) => {
         });
     }
 
-    const { projectId, title, description, link } = req.body;
+    const { projectId, title, description, link, private } = req.body;
 
     const client = await db.connect();
 
     try{
         await client.query('BEGIN');
         await client.query(
-            `UPDATE projects SET title = $1, description = $2, link = $3 WHERE project_id = $4`
-        ,[title, description, link, projectId]
+            `UPDATE projects SET title = $1, description = $2, link = $3, private = $4 WHERE project_id = $5`
+        ,[title, description, link, private, projectId]
         );
         await client.query('COMMIT');
     } catch (e) {

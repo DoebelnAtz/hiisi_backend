@@ -1,7 +1,7 @@
 const api = require('../scheduled-jobs/api');
 const { validationResult } = require('express-validator');
 const bcrypt = require('bcryptjs');
-const db = require('../queries');
+const db = require('../postgres/queries');
 const { errorLogger } = require('../logger');
 const dbUsers = require('../db-utils/db-user');
 let jwt = require('jsonwebtoken');
@@ -201,9 +201,9 @@ const getAllByUserId = async (req, res) => {
     const page = req.query.page || 1;
     const senderId =  req.decoded.u_id;
     const userId = req.query.user || senderId;
-    const filter = req.query.filter;
-    const order = req.query.order;
-    const reverse = req.query.reverse;
+    const filter = req.query.filter || 'none';
+    const order = req.query.order || 'popular';
+    const reverse = req.query.reverse || 'false';
 
     // we are dangerously inserting values into a query so we need to make sure that
     // the order parameter is correct
@@ -236,40 +236,53 @@ const getAllByUserId = async (req, res) => {
     console.log(filter);
     let userSubmissions;
     try {
-        if (filter === 'none') {
-            userSubmissions = await db.query(
+        switch (filter) {
+            default:
+                userSubmissions = await db.query(
                 `SELECT * FROM (
-            SELECT p.title, null AS thumbnail, p.votes, pv.vote, p.published_date,
-            p.project_id as id, 'project' AS type, '/projects' AS link
-            FROM projects p 
-            LEFT JOIN projectvotes pv ON pv.project_id = p.project_id AND pv.u_id = $2
-            WHERE p.creator = $1
-            UNION ALL 
-            SELECT r.title, r.thumbnail, r.votes, rv.vote, r.published_date,
-            r.r_id AS id, 'resource' AS type, '/resources' AS link 
-            FROM resources r 
-            LEFT JOIN voteconnections rv ON r.r_id = rv.r_id AND rv.u_id = $2 
-            WHERE r.author = $1
-            UNION ALL 
-            SELECT b.title,  null AS thumbnail, b.votes, bv.vote, b.published_date,
-            b.b_id AS id, 'post' AS type, '/forum' AS link 
-            FROM blogs b 
-            LEFT JOIN likedposts bv ON bv.b_id = b.b_id AND bv.u_id = $2
-            WHERE b.author =$1
-            ) AS res ORDER BY ${order1}, ${order2} LIMIT $3 OFFSET $4`, [userId, senderId, 14, (page - 1) * 14]);
-        } else {
-            // Messy query, might be better to just do a switch / case..
-            const table = filter === 'posts' ? 'blogs' : filter === 'resources' ? filter : 'projects';
-            const votes = filter === 'posts' ? 'likedposts' : filter === 'resources' ? 'voteconnections'  : 'projectvotes';
-            const id = filter === 'posts' ? 'b_id' : filter === 'resources' ? 'r_id' : 'project_id';
-            userSubmissions = await db.query(
-                `SELECT * FROM (
-            SELECT title, ${table === 'resources' ? 'thumbnail' : 'null'} AS thumbnail, votes, vote, published_date,
-            t.${id} as id, '${filter.slice(0, filter.length - 1)}' AS type, '/${filter}' AS link
-            FROM ${table} t
-            LEFT JOIN ${votes} tv ON tv.${id} = t.${id} AND tv.u_id = $2
-            WHERE t.${table === 'projects' ? 'creator' : 'author'} = $1
-            ) AS res ORDER BY ${order1}, ${order2} LIMIT $3 OFFSET $4`, [userId, senderId, 14, (page - 1) * 14]);
+                SELECT p.title, null AS thumbnail, p.votes, pv.vote, p.published_date,
+                p.project_id as id, 'project' AS type, '/projects' AS link
+                FROM projects p 
+                LEFT JOIN projectvotes pv ON pv.project_id = p.project_id AND pv.u_id = $2
+                WHERE p.creator = $1 AND p.private = false
+                UNION ALL 
+                SELECT r.title, r.thumbnail, r.votes, rv.vote, r.published_date,
+                r.r_id AS id, 'resource' AS type, '/resources' AS link 
+                FROM resources r 
+                LEFT JOIN voteconnections rv ON r.r_id = rv.r_id AND rv.u_id = $2 
+                WHERE r.author = $1
+                UNION ALL 
+                SELECT b.title,  null AS thumbnail, b.votes, bv.vote, b.published_date,
+                b.b_id AS id, 'post' AS type, '/forum' AS link 
+                FROM blogs b 
+                LEFT JOIN likedposts bv ON bv.b_id = b.b_id AND bv.u_id = $2
+                WHERE b.author =$1
+                ) AS res ORDER BY ${order1}, ${order2} LIMIT $3 OFFSET $4`, [userId, senderId, 14, (page - 1) * 14]);
+                break;
+            case 'posts':
+                userSubmissions = await db.query(`
+                SELECT * FROM (
+                SELECT b.title, b.votes, v.vote, b.published_Date, 'post' AS type, '/posts' AS link, b.b_id AS id
+                FROM blogs b LEFT JOIN likedposts v ON b.b_id = v.b_id AND v.u_id = $2 WHERE b.author = $1
+                ) AS res ORDER BY ${order1}, ${order2} LIMIT $3 OFFSET $4`,
+                    [userId, senderId, 14, (page - 1) * 14]);
+                break;
+            case 'resources':
+                userSubmissions = await db.query(`
+                SELECT * FROM (
+                SELECT r.title, r.votes, v.vote, r.published_Date, r.thumbnail, 'resource' AS type, '/resources' AS link, r.r_id AS id 
+                FROM resources r LEFT JOIN voteconnections v ON r.r_id = v.r_id AND v.u_id = $2 WHERE r.author = $1
+                ) AS res ORDER BY ${order1}, ${order2} LIMIT $3 OFFSET $4`,
+                    [userId, senderId, 14, (page - 1) * 14]);
+                break;
+            case 'projects':
+                userSubmissions = await db.query(`
+                SELECT * FROM (
+                SELECT p.title, p.votes, v.vote, p.published_Date, 'project' AS type, '/projects' AS link, p.project_id AS id
+                FROM projects p LEFT JOIN projectvotes v ON p.project_id = v.project_id AND v.u_id = $2 WHERE p.creator = $1 AND (p.private = false OR p.creator = $2)
+                ) AS res ORDER BY ${order1}, ${order2} LIMIT $3 OFFSET $4`,
+                    [userId, senderId, 14, (page - 1) * 14]);
+                break;
         }
         userSubmissions = userSubmissions.rows;
     } catch(e) {
