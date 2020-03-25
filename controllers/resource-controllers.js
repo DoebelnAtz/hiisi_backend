@@ -6,47 +6,47 @@ const urlMetadata = require('url-metadata');
 var URL = require('url').URL;
 
 const getResources = async (req, res) => {
-    const userId = req.decoded.u_id;
+	const userId = req.decoded.u_id;
 
-    const page = req.query.page || 1;
-    const filter = req.query.filter || 'none';
-    const order = req.query.order || 'popular';
-    const reverse = req.query.reverse || 'false';
+	const page = req.query.page || 1;
+	const filter = req.query.filter || 'none';
+	const order = req.query.order || 'popular';
+	const reverse = req.query.reverse || 'false';
 
-    // we are dangerously inserting values into a query so we need to make sure that
-    // the order parameter is correct
-    if (order !== 'popular' && order !== 'recent' && order !== 'title') {
-        errorLogger.error('Failed to get resources: invalid order parameter');
-        return res.status(422).json({
-            status: 'error',
-            message: 'Failed to get resources',
-        });
-    }
-    let order1;
-    let order2;
-    let reverseOrder;
-    switch (order) {
-        case 'popular':
-            reverseOrder = reverse === 'true' ? 'ASC' : 'DESC';
-            order1 = `r.votes ${reverseOrder}`;
-            order2 = 'r.published_date DESC';
-            break;
-        case 'recent':
-            reverseOrder = reverse === 'true' ? 'ASC' : 'DESC';
-            order1 = `r.published_date ${reverseOrder}`;
-            order2 = 'r.votes DESC';
-            break;
-        default:
-            reverseOrder = reverse === 'true' ? 'DESC' : 'ASC';
-            order1 = `r.title ${reverseOrder}`;
-            order2 = 'r.published_date DESC';
-    }
-    let resources;
-    const perPage = 14;
-    try {
-        if (filter === 'none') {
-            resources = await db.query(
-                `SELECT vc.vote, u.username, u.profile_pic, u.u_id,
+	// we are dangerously inserting values into a query so we need to make sure that
+	// the order parameter is correct
+	if (order !== 'popular' && order !== 'recent' && order !== 'title') {
+		errorLogger.error('Failed to get resources: invalid order parameter');
+		return res.status(422).json({
+			status: 'error',
+			message: 'Failed to get resources',
+		});
+	}
+	let order1;
+	let order2;
+	let reverseOrder;
+	switch (order) {
+		case 'popular':
+			reverseOrder = reverse === 'true' ? 'ASC' : 'DESC';
+			order1 = `r.votes ${reverseOrder}`;
+			order2 = 'r.published_date DESC';
+			break;
+		case 'recent':
+			reverseOrder = reverse === 'true' ? 'ASC' : 'DESC';
+			order1 = `r.published_date ${reverseOrder}`;
+			order2 = 'r.votes DESC';
+			break;
+		default:
+			reverseOrder = reverse === 'true' ? 'DESC' : 'ASC';
+			order1 = `r.title ${reverseOrder}`;
+			order2 = 'r.published_date DESC';
+	}
+	let resources;
+	const perPage = 14;
+	try {
+		if (filter === 'none') {
+			resources = await db.query(
+				`SELECT vc.vote, u.username, u.profile_pic, u.u_id,
                 r.votes, r.title, r.r_id, r.link, r.published_date, r.edited, r.thumbnail, r.resource_type,
                 c.tags, c.colors FROM resources r
                 JOIN users u ON r.author = u.u_id
@@ -55,13 +55,13 @@ const getResources = async (req, res) => {
                 FROM tagconnections c
                 JOIN tags t ON t.tag_id = c.tag_id
                 GROUP BY c.r_id) c using (r_id) 
-                LEFT JOIN voteconnections vc ON vc.r_id = r.r_id AND vc.u_id = $1 
+                LEFT JOIN resourcevotes vc ON vc.r_id = r.r_id AND vc.u_id = $1 
                 ORDER BY ${order1}, ${order2} LIMIT $2 OFFSET $3`,
-                [userId, perPage, (page - 1) * perPage],
-            );
-        } else {
-            resources = await db.query(
-                `SELECT vc.vote, u.username, u.profile_pic, u.u_id, 
+				[userId, perPage, (page - 1) * perPage],
+			);
+		} else {
+			resources = await db.query(
+				`SELECT vc.vote, u.username, u.profile_pic, u.u_id, 
                 r.votes, r.title, r.r_id, r.link, r.published_date, r.edited,  r.thumbnail, r.resource_type,
                 c.tags, c.colors FROM resources r 
                 JOIN users u ON r.author = u.u_id 
@@ -70,131 +70,131 @@ const getResources = async (req, res) => {
                 FROM tagconnections c 
                 JOIN tags t ON t.tag_id = c.tag_id 
                 GROUP BY c.r_id) c using (r_id) 
-                LEFT JOIN voteconnections vc ON vc.r_id = r.r_id 
+                LEFT JOIN resourcevotes vc ON vc.r_id = r.r_id 
                 AND vc.u_id = $2 WHERE $1 = ANY (tags) 
                 ORDER BY ${order1}, ${order2} LIMIT $3 OFFSET $4`,
-                [filter, userId, perPage, (page - 1) * perPage],
-            );
-        }
+				[filter, userId, perPage, (page - 1) * perPage],
+			);
+		}
 
-        resources = resources.rows.map((r) => {
-            return { ...r, owner: Number(r.u_id) === Number(userId) };
-        });
-    } catch (e) {
-        errorLogger.error('Failed to get resources: ' + e);
-        return res.status(500).json({
-            status: 'error',
-            message: 'Failed to get resources',
-        });
-    }
-    res.json(resources);
+		resources = resources.rows.map((r) => {
+			return { ...r, owner: Number(r.u_id) === Number(userId) };
+		});
+	} catch (e) {
+		errorLogger.error('Failed to get resources: ' + e);
+		return res.status(500).json({
+			status: 'error',
+			message: 'Failed to get resources',
+		});
+	}
+	res.json(resources);
 };
 
 const deleteTagFromResource = async (req, res) => {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-        return res.status(422).json({
-            status: 'error',
-            message: 'Invalid input please try again.',
-        });
-    }
-    const { tagId, rId } = req.body;
-    try {
-        await db.query(
-            `DELETE from tagconnections WHERE tag_id = $1 
+	const errors = validationResult(req);
+	if (!errors.isEmpty()) {
+		return res.status(422).json({
+			status: 'error',
+			message: 'Invalid input please try again.',
+		});
+	}
+	const { tagId, rId } = req.body;
+	try {
+		await db.query(
+			`DELETE from tagconnections WHERE tag_id = $1 
 			AND r_id = $2`,
-            [tagId, rId],
-        );
-    } catch (e) {
-        errorLogger.error('Failed to delete tag from resource: ' + e);
-        return res.status(500).json({
-            status: 'error',
-            message: 'Failed to delete tag from resource',
-        });
-    }
-    res.json({ success: true });
+			[tagId, rId],
+		);
+	} catch (e) {
+		errorLogger.error('Failed to delete tag from resource: ' + e);
+		return res.status(500).json({
+			status: 'error',
+			message: 'Failed to delete tag from resource',
+		});
+	}
+	res.json({ success: true });
 };
 
 const addTagToResource = async (req, res) => {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-        return res.status(422).json({
-            status: 'error',
-            message: 'Invalid input please try again.',
-        });
-    }
-    const { tag, rId } = req.body;
+	const errors = validationResult(req);
+	if (!errors.isEmpty()) {
+		return res.status(422).json({
+			status: 'error',
+			message: 'Invalid input please try again.',
+		});
+	}
+	const { tag, rId } = req.body;
 
-    const client = await db.connect();
-    let createdTag;
-    try {
-        await client.query('BEGIN');
+	const client = await db.connect();
+	let createdTag;
+	try {
+		await client.query('BEGIN');
 
-        let created = await client.query(
-            'INSERT INTO tagconnections (tag_id, r_id) ' +
-            'VALUES ($1, $2) RETURNING tag_id, r_id',
-            [tag.tag_id, rId],
-        );
-        createdTag = created.rows[0];
-        await client.query('COMMIT');
-    } catch (e) {
-        await client.query('ROLLBACK');
-        errorLogger.error('Failed to add tags: ' + e);
-        return res.status(500).json({
-            success: false,
-            status: 'error',
-            message: 'Failed to add tags.',
-        });
-    } finally {
-        client.release();
-    }
-    res.json(tag);
+		let created = await client.query(
+			'INSERT INTO tagconnections (tag_id, r_id) ' +
+				'VALUES ($1, $2) RETURNING tag_id, r_id',
+			[tag.tag_id, rId],
+		);
+		createdTag = created.rows[0];
+		await client.query('COMMIT');
+	} catch (e) {
+		await client.query('ROLLBACK');
+		errorLogger.error('Failed to add tags: ' + e);
+		return res.status(500).json({
+			success: false,
+			status: 'error',
+			message: 'Failed to add tags.',
+		});
+	} finally {
+		client.release();
+	}
+	res.json(tag);
 };
 
 const getResourceById = async (req, res) => {
-    const resourceId = req.params.rid;
-    const senderId = req.decoded.u_id;
+	const resourceId = req.params.rid;
+	const senderId = req.decoded.u_id;
 
-    let resource;
-    try {
-        resource = await db.query(
-            `SELECT r.r_id, r.title, r.link, r.description, 
+	let resource;
+	try {
+		resource = await db.query(
+			`SELECT r.r_id, r.title, r.link, r.description, 
             r.author, r.votes, r.published_date, r.commentthread, r.thumbnail, 
             u.profile_pic, u.u_id, u.username 
             FROM resources r JOIN users u ON u.u_id = r.author 
             WHERE r.r_id = $1`,
-            [resourceId],
-        );
-        resource = {
-            ...resource.rows[0],
-            owner: resource.rows[0].u_id === senderId,
-        };
-    } catch (e) {
-        errorLogger.error('Failed to get resource: ' + e);
-        return res.status(500).json({
-            status: 'error',
-            message: 'Failed to get resource',
-        });
-    }
+			[resourceId],
+		);
+		resource = {
+			...resource.rows[0],
+			owner: resource.rows[0].u_id === senderId,
+		};
+	} catch (e) {
+		errorLogger.error('Failed to get resource: ' + e);
+		return res.status(500).json({
+			status: 'error',
+			message: 'Failed to get resource',
+		});
+	}
 
-    let tags;
-    try {
-        tags = await db.query(
-            'SELECT t.title, t.tag_id, t.color FROM ' +
-            'tags t JOIN tagconnections c ' +
-            'ON t.tag_id = c.tag_id WHERE c.r_id = $1',
-            [resourceId],
-        );
-        tags = tags.rows;
-        resource = { ...resource, tags: tags };
-    } catch (e) {
-        errorLogger.error('Failed to get tags for resource: ' + e);
-        return res.status(500).json({
-            status: 'error',
-            message: 'Failed to get tags for resource',
-        });
-    }
-    res.json(resource);
+	let tags;
+	try {
+		tags = await db.query(
+			'SELECT t.title, t.tag_id, t.color FROM ' +
+				'tags t JOIN tagconnections c ' +
+				'ON t.tag_id = c.tag_id WHERE c.r_id = $1',
+			[resourceId],
+		);
+		tags = tags.rows;
+		resource = { ...resource, tags: tags };
+	} catch (e) {
+		errorLogger.error('Failed to get tags for resource: ' + e);
+		return res.status(500).json({
+			status: 'error',
+			message: 'Failed to get tags for resource',
+		});
+	}
+	res.json(resource);
 };
 
 const createResource = async (req, res) => {
@@ -203,29 +203,29 @@ const createResource = async (req, res) => {
 	const userId = req.decoded.u_id;
 	let md;
 	try {
-		 md = await urlMetadata(link);
-		 console.log(md);
-	 } catch (e) {
-		 md = '';
-	 }
+		md = await urlMetadata(link);
+		console.log(md);
+	} catch (e) {
+		md = '';
+	}
 	let mdImage = md['og:image'];
 	// if og:image is a relative path we try to create a valid url for it
 
-    if (mdImage) {
-        try {
-            new URL(mdImage);
-        } catch (e) {
-            let newLink = new URL(link); // create a URL object from the provided link
-            mdImage = newLink.origin + mdImage; // take origin + path to image should give us a usable url, in most cases
-            try {
-                new URL(mdImage)
-            } catch (e) {
-                mdImage = null;
-            }
-        }
-    } else {
-        mdImage = null;
-    }
+	if (mdImage) {
+		try {
+			new URL(mdImage);
+		} catch (e) {
+			let newLink = new URL(link); // create a URL object from the provided link
+			mdImage = newLink.origin + mdImage; // take origin + path to image should give us a usable url, in most cases
+			try {
+				new URL(mdImage);
+			} catch (e) {
+				mdImage = null;
+			}
+		}
+	} else {
+		mdImage = null;
+	}
 	let createdResource;
 	try {
 		await client.query('BEGIN');
@@ -252,16 +252,15 @@ const createResource = async (req, res) => {
 		if (e.code === '23505') {
 			res.status(400).json({
 				success: false,
-				status:'error',
-				message: 'Title already exists'
-			})
-		}
-		else {
-            return res.status(500).json({
-                success: false,
-                status: 'error',
-                message: 'Failed to add Resource to DB.',
-            });
+				status: 'error',
+				message: 'Title already exists',
+			});
+		} else {
+			return res.status(500).json({
+				success: false,
+				status: 'error',
+				message: 'Failed to add Resource to DB.',
+			});
 		}
 	} finally {
 		client.release();
@@ -313,7 +312,7 @@ const deleteResource = async (req, res) => {
 		await client.query('DELETE FROM tagconnections t WHERE t.r_id = $1', [
 			resourceId,
 		]);
-		await client.query('DELETE FROM voteconnections t WHERE t.r_id = $1', [
+		await client.query('DELETE FROM resourcevotes t WHERE t.r_id = $1', [
 			resourceId,
 		]);
 
@@ -409,7 +408,7 @@ const voteResource = async (req, res) => {
 	let voteTarget;
 	try {
 		voteTarget = await db.query(
-			`SELECT c.vote, c.u_id FROM voteconnections c WHERE c.r_id = $1 AND c.u_id =$2`,
+			`SELECT c.vote, c.u_id FROM resourcevotes c WHERE c.r_id = $1 AND c.u_id =$2`,
 			[resourceId, userId],
 		);
 		voteTarget = voteTarget.rows[0];
@@ -429,7 +428,7 @@ const voteResource = async (req, res) => {
 				case 0:
 					vote = -voteTarget.vote;
 					await client.query(
-						`DELETE FROM voteconnections 
+						`DELETE FROM resourcevotes 
                             WHERE r_id = $1 AND u_id = $2`,
 						[resourceId, userId],
 					);
@@ -437,7 +436,7 @@ const voteResource = async (req, res) => {
 				case 1:
 					vote = 2;
 					await client.query(
-						`UPDATE voteconnections 
+						`UPDATE resourcevotes 
                             SET vote = 1 
                             WHERE r_id = $1 AND u_id = $2`,
 						[resourceId, userId],
@@ -446,7 +445,7 @@ const voteResource = async (req, res) => {
 				case -1:
 					vote = -2;
 					await client.query(
-						`UPDATE voteconnections 
+						`UPDATE resourcevotes 
                             SET vote = -1 
                             WHERE r_id = $1 AND u_id = $2`,
 						[resourceId, userId],
@@ -465,7 +464,7 @@ const voteResource = async (req, res) => {
 		} else {
 			await client.query(
 				`INSERT INTO 
-                    voteconnections (r_id, u_id, vote) 
+                    resourcevotes (r_id, u_id, vote) 
                    	VALUES ($1, $2, $3)`,
 				[resourceId, userId, vote],
 			);

@@ -1,6 +1,7 @@
 const { validationResult } = require('express-validator');
 const { errorLogger } = require('../logger');
 const db = require('../postgres/queries');
+const { posts, getFields, users, postVotes } = require('../db-utils/db-tables');
 
 const getBlogs = async (req, res) => {
 	let sender;
@@ -8,9 +9,10 @@ const getBlogs = async (req, res) => {
 	let order = req.query.order || 'popular';
 	let pagination = req.query.page || 1;
 	let reverse = req.query.reverse || 'false';
-
 	if (order !== 'popular' && order !== 'recent' && order !== 'title') {
-		errorLogger.error('Failed to get blogs: invalid order parameter');
+		errorLogger.error(
+			`Failed to get ${posts.tableName}: invalid order parameter`,
+		);
 		return res.status(422).json({
 			status: 'error',
 			message: 'Failed to get blogs',
@@ -38,7 +40,7 @@ const getBlogs = async (req, res) => {
 	try {
 		sender = await db.query(
 			`SELECT b_id, vote FROM users 
-            JOIN likedposts ON likedposts.u_id = $1`,
+            JOIN blogvotes ON blogvotes.u_id = $1`,
 			[senderId],
 		);
 		sender = sender.rows.map((row) => row.b_id);
@@ -49,24 +51,44 @@ const getBlogs = async (req, res) => {
 			message: 'Failed to get blogs',
 		});
 	}
+
 	const perPage = 14;
 	const userId = req.decoded.u_id;
 	let blogs;
+	// trying out ways to improve query code
+	// this is not an improvement...
+	let query = `
+		SELECT 
+		${getFields(
+			posts.id,
+			posts.content,
+			posts.title,
+			posts.edited,
+			posts.pubDate,
+			posts.votes,
+			posts.commentThread,
+			postVotes.vote + ' AS voted',
+			users.id,
+			users.username,
+		)}
+		FROM ${posts.table} JOIN ${users.table}
+		ON ${posts.author} = ${users.id} 
+		LEFT JOIN (SELECT ${getFields(postVotes.vote, postVotes.postId)} FROM ${
+		postVotes.table
+	} WHERE ${postVotes.userId} = $1)
+		 ${postVotes.voteShort} ON ${postVotes.postId} = ${posts.id} 
+		ORDER BY ${order1}, ${order2} LIMIT $2 OFFSET $3
+		`;
 	try {
-		blogs = await db.query(
-			`SELECT b.b_id, b.content, b.title, b.edited, l.vote AS voted,
-            b.published_date, b.commentthread, b.votes, u.u_id, u.username 
-            FROM blogs b JOIN users u
-            ON b.author = u.u_id 
-            LEFT JOIN (SELECT vote, b_id FROM likedposts WHERE u_id = $1) l
-            ON l.b_id = b.b_id 
-            ORDER BY ${order1}, ${order2} LIMIT $2 OFFSET $3`,
-			[userId, perPage, (pagination - 1) * perPage],
-		);
+		blogs = await db.query(query, [
+			userId,
+			perPage,
+			(pagination - 1) * perPage,
+		]);
 		blogs = blogs.rows;
 		blogs.map((blog) => (blog.owner = blog.u_id === senderId));
 	} catch (e) {
-		errorLogger.error('Failed to get blogs: ' + e);
+		errorLogger.error(`'Failed to get blogs: ${e} ${query}`);
 		return res.status(500).json({
 			status: 'error',
 			message: 'Failed to get blogs',
@@ -194,7 +216,7 @@ const voteBlog = async (req, res) => {
 	try {
 		voteTarget = await db.query(
 			`SELECT l.b_id, l.vote 
-			FROM likedposts l 
+			FROM blogvotes l 
 			WHERE l.b_id = $1 AND l.u_id = $2`,
 			[blogId, userId],
 		);
@@ -216,14 +238,14 @@ const voteBlog = async (req, res) => {
 					vote = -voteTarget.vote;
 					console.log(blogId, userId);
 					await client.query(
-						`DELETE FROM likedposts WHERE b_id = $1 AND u_id = $2`,
+						`DELETE FROM blogvotes WHERE b_id = $1 AND u_id = $2`,
 						[blogId, userId],
 					);
 					break;
 				case 1:
 					vote = 2;
 					await client.query(
-						`UPDATE likedposts
+						`UPDATE blogvotes
                             SET vote = 1 
                             WHERE b_id = $1 AND u_id = $2`,
 						[blogId, userId],
@@ -232,7 +254,7 @@ const voteBlog = async (req, res) => {
 				case -1:
 					vote = -2;
 					await client.query(
-						`UPDATE likedposts
+						`UPDATE blogvotes
                             SET vote = -1 
                             WHERE b_id = $1 AND u_id = $2`,
 						[blogId, userId],
@@ -251,7 +273,7 @@ const voteBlog = async (req, res) => {
 		} else {
 			await client.query(
 				`INSERT INTO 
-                    likedposts (b_id, u_id, vote) 
+                    blogvotes (b_id, u_id, vote) 
                     VALUES ($1, $2, $3)`,
 				[blogId, userId, vote],
 			);
@@ -290,23 +312,24 @@ const updateBlog = async (req, res) => {
 	const senderId = req.decoded.u_id;
 	let updatedBlog;
 	try {
-	    updatedBlog = await db.query(
-	        `UPDATE blogs
+		updatedBlog = await db.query(
+			`UPDATE blogs
 	        SET
 	        title = $1,
 	        content = $2,
 	        edited = NOW()
 	        WHERE b_id = $3 AND author = $4`,
-			[title, content, postId, senderId]);
-	    updatedBlog = updatedBlog.rows[0];
+			[title, content, postId, senderId],
+		);
+		updatedBlog = updatedBlog.rows[0];
 	} catch (e) {
-	    errorLogger.error(`Failed to update blog: ${e}`);
-	    return res.status(500).json({
-	        status: 'error',
-	        message: 'Failed to update blog'
-	    })
+		errorLogger.error(`Failed to update blog: ${e}`);
+		return res.status(500).json({
+			status: 'error',
+			message: 'Failed to update blog',
+		});
 	}
-	res.json(updatedBlog)
+	res.json(updatedBlog);
 };
 
 const deleteBlog = async (req, res) => {
@@ -315,7 +338,10 @@ const deleteBlog = async (req, res) => {
 	const { blogId } = req.body;
 	let blogToDelete;
 	try {
-		blogToDelete = await db.query(`SELECT b_id, commentthread FROM blogs WHERE b_id = $1`, [blogId]);
+		blogToDelete = await db.query(
+			`SELECT b_id, commentthread FROM blogs WHERE b_id = $1`,
+			[blogId],
+		);
 		blogToDelete = blogToDelete.rows[0];
 	} catch (e) {
 		errorLogger.error('Failed to find post to delete: ' + e);
@@ -323,25 +349,21 @@ const deleteBlog = async (req, res) => {
 			success: false,
 			status: 'error',
 			message: 'Failed to find post to delete.',
-		})
+		});
 	}
 	const client = await db.connect();
 
 	try {
 		await client.query('BEGIN');
 
-		await client.query(
-			`DELETE FROM likedposts WHERE b_id = $1`,
-			[blogId]
-		);
+		await client.query(`DELETE FROM blogvotes WHERE b_id = $1`, [blogId]);
 
+		await client.query(`DELETE FROM blogs WHERE b_id = $1`, [blogId]);
 		await client.query(
-			`DELETE FROM blogs WHERE b_id = $1`,
-			 [blogId]
-		);
-		await  client.query(`
+			`
 			DELETE FROM commentthreads WHERE t_id = $1`,
-			[blogToDelete.commentthread]);
+			[blogToDelete.commentthread],
+		);
 		await client.query('COMMIT');
 	} catch (e) {
 		await client.query('ROLLBACK');
@@ -354,7 +376,7 @@ const deleteBlog = async (req, res) => {
 	} finally {
 		client.release();
 	}
-	res.json({success: true})
+	res.json({ success: true });
 };
 
 exports.getBlogs = getBlogs;
