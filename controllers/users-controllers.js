@@ -249,13 +249,13 @@ const getAllByUserId = async (req, res) => {
                 SELECT r.title, r.thumbnail, r.votes, rv.vote, r.published_date,
                 r.r_id AS id, 'resource' AS type, '/resources' AS link 
                 FROM resources r 
-                LEFT JOIN voteconnections rv ON r.r_id = rv.r_id AND rv.u_id = $2 
+                LEFT JOIN resourcevotes rv ON r.r_id = rv.r_id AND rv.u_id = $2 
                 WHERE r.author = $1
                 UNION ALL 
                 SELECT b.title,  null AS thumbnail, b.votes, bv.vote, b.published_date,
                 b.b_id AS id, 'post' AS type, '/forum' AS link 
                 FROM blogs b 
-                LEFT JOIN likedposts bv ON bv.b_id = b.b_id AND bv.u_id = $2
+                LEFT JOIN blogvotes bv ON bv.b_id = b.b_id AND bv.u_id = $2
                 WHERE b.author =$1
                 ) AS res ORDER BY ${order1}, ${order2} LIMIT $3 OFFSET $4`, [userId, senderId, 14, (page - 1) * 14]);
                 break;
@@ -263,7 +263,7 @@ const getAllByUserId = async (req, res) => {
                 userSubmissions = await db.query(`
                 SELECT * FROM (
                 SELECT b.title, b.votes, v.vote, b.published_Date, 'post' AS type, '/posts' AS link, b.b_id AS id
-                FROM blogs b LEFT JOIN likedposts v ON b.b_id = v.b_id AND v.u_id = $2 WHERE b.author = $1
+                FROM blogs b LEFT JOIN blogvotes v ON b.b_id = v.b_id AND v.u_id = $2 WHERE b.author = $1
                 ) AS res ORDER BY ${order1}, ${order2} LIMIT $3 OFFSET $4`,
                     [userId, senderId, 14, (page - 1) * 14]);
                 break;
@@ -271,7 +271,7 @@ const getAllByUserId = async (req, res) => {
                 userSubmissions = await db.query(`
                 SELECT * FROM (
                 SELECT r.title, r.votes, v.vote, r.published_Date, r.thumbnail, 'resource' AS type, '/resources' AS link, r.r_id AS id 
-                FROM resources r LEFT JOIN voteconnections v ON r.r_id = v.r_id AND v.u_id = $2 WHERE r.author = $1
+                FROM resources r LEFT JOIN resourcevotes v ON r.r_id = v.r_id AND v.u_id = $2 WHERE r.author = $1
                 ) AS res ORDER BY ${order1}, ${order2} LIMIT $3 OFFSET $4`,
                     [userId, senderId, 14, (page - 1) * 14]);
                 break;

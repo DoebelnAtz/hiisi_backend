@@ -56,16 +56,11 @@ class users {
 
 class resources {
 	constructor() {}
-	inspect = () => {
-		return 'posts p';
-	};
 }
 
 class projects {
 	constructor() {}
-	inspect = () => {
-		return 'posts p';
-	};
+
 }
 
 module.exports = {
