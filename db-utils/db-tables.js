@@ -60,7 +60,6 @@ class resources {
 
 class projects {
 	constructor() {}
-
 }
 
 module.exports = {
