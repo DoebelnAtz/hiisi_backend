@@ -4,6 +4,7 @@ const cors = require('cors');
 let middleware = require('./middleware/middleware');
 const app = express();
 require('dotenv').config();
+
 app.listen(process.env.PORT || 5000);
 const io = require('socket.io')(process.env.SOCKET_PORT || 5010, {
     handlePreflightRequest: function (req, res) {
