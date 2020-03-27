@@ -28,13 +28,13 @@ const getResources = async (req, res) => {
 	switch (order) {
 		case 'popular':
 			reverseOrder = reverse === 'true' ? 'ASC' : 'DESC';
-			order1 = `r.votes ${reverseOrder}`;
+			order1 = `votes ${reverseOrder}`;
 			order2 = 'r.published_date DESC';
 			break;
 		case 'recent':
 			reverseOrder = reverse === 'true' ? 'ASC' : 'DESC';
 			order1 = `r.published_date ${reverseOrder}`;
-			order2 = 'r.votes DESC';
+			order2 = 'votes DESC';
 			break;
 		default:
 			reverseOrder = reverse === 'true' ? 'DESC' : 'ASC';
@@ -47,7 +47,7 @@ const getResources = async (req, res) => {
 		if (filter === 'none') {
 			resources = await db.query(
 				`SELECT vc.vote, u.username, u.profile_pic, u.u_id,
-                r.votes, r.title, r.r_id, r.link, r.published_date, r.edited, r.thumbnail, r.resource_type,
+                COALESCE(rv.votes, 0) AS votes, r.title, r.r_id, r.link, r.published_date, r.edited, r.thumbnail, r.resource_type,
                 c.tags, c.colors FROM resources r
                 JOIN users u ON r.author = u.u_id
                 LEFT JOIN (
@@ -55,6 +55,8 @@ const getResources = async (req, res) => {
                 FROM tagconnections c
                 JOIN tags t ON t.tag_id = c.tag_id
                 GROUP BY c.r_id) c using (r_id) 
+                LEFT JOIN (SELECT r_id, SUM(vote) AS votes FROM resourcevotes GROUP BY r_id) rv
+                ON rv.r_id = r.r_id
                 LEFT JOIN resourcevotes vc ON vc.r_id = r.r_id AND vc.u_id = $1 
                 ORDER BY ${order1}, ${order2} LIMIT $2 OFFSET $3`,
 				[userId, perPage, (page - 1) * perPage],
@@ -62,7 +64,7 @@ const getResources = async (req, res) => {
 		} else {
 			resources = await db.query(
 				`SELECT vc.vote, u.username, u.profile_pic, u.u_id, 
-                r.votes, r.title, r.r_id, r.link, r.published_date, r.edited,  r.thumbnail, r.resource_type,
+                COALESCE(rv.votes, 0) AS votes, r.title, r.r_id, r.link, r.published_date, r.edited,  r.thumbnail, r.resource_type,
                 c.tags, c.colors FROM resources r 
                 JOIN users u ON r.author = u.u_id 
                 JOIN (
@@ -71,6 +73,8 @@ const getResources = async (req, res) => {
                 JOIN tags t ON t.tag_id = c.tag_id 
                 GROUP BY c.r_id) c using (r_id) 
                 LEFT JOIN resourcevotes vc ON vc.r_id = r.r_id 
+                LEFT JOIN (SELECT r_id, SUM(vote) AS votes FROM resourcevotes GROUP BY r_id) rv
+                ON rv.r_id = r.r_id
                 AND vc.u_id = $2 WHERE $1 = ANY (tags) 
                 ORDER BY ${order1}, ${order2} LIMIT $3 OFFSET $4`,
 				[filter, userId, perPage, (page - 1) * perPage],

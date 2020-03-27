@@ -59,24 +59,16 @@ const getBlogs = async (req, res) => {
 	// this is not an improvement...
 	let query = `
 		SELECT 
-		${getFields(
-			posts.id,
-			posts.content,
-			posts.title,
-			posts.edited,
-			posts.pubDate,
-			posts.votes,
-			posts.commentThread,
-			postVotes.vote + ' AS voted',
-			users.id,
-			users.username,
-		)}
-		FROM ${posts.table} JOIN ${users.table}
-		ON ${posts.author} = ${users.id} 
-		LEFT JOIN (SELECT ${getFields(postVotes.vote, postVotes.postId)} FROM ${
-		postVotes.table
-	} WHERE ${postVotes.userId} = $1)
-		 ${postVotes.voteShort} ON ${postVotes.postId} = ${posts.id} 
+			b.b_id, b.title, b.content, b.author, b.published_date, b.edited, b.commentthread,
+			u.username, u.u_id,
+			COALESCE(v.votes, 0) AS votes, bv.vote AS voted
+		FROM blogs b JOIN users u
+		ON b.author = u.u_id 
+		LEFT JOIN (SELECT b_id, SUM(vote) AS votes FROM blogvotes GROUP BY b_id) v
+		ON v.b_id = b.b_id
+		LEFT JOIN (SELECT b_id, vote FROM blogvotes
+			WHERE u_id = $1) bv
+		 ON bv.b_id = b.b_id 
 		ORDER BY ${order1}, ${order2} LIMIT $2 OFFSET $3
 		`;
 	try {
@@ -278,12 +270,6 @@ const voteBlog = async (req, res) => {
 				[blogId, userId, vote],
 			);
 		}
-		console.log(vote, blogId);
-		await client.query(
-			`UPDATE blogs 
-			SET votes = votes + $1 WHERE b_id = $2`,
-			[vote, blogId],
-		);
 		await client.query('COMMIT');
 	} catch (e) {
 		await client.query('ROLLBACK');
