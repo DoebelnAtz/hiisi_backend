@@ -10,6 +10,7 @@ const getResources = async (req, res) => {
 
 	const page = req.query.page || 1;
 	const filter = req.query.filter || 'none';
+	const show = req.query.show || 'all';
 	const order = req.query.order || 'popular';
 	const reverse = req.query.reverse || 'false';
 
@@ -44,43 +45,47 @@ const getResources = async (req, res) => {
 	let resources;
 	const perPage = 14;
 	try {
-		if (filter === 'none') {
-			resources = await db.query(
-				`SELECT vc.vote, u.username, u.profile_pic, u.u_id,
-                COALESCE(rv.votes, 0) AS votes, r.title, r.r_id, r.link, r.published_date, r.edited, r.thumbnail, r.resource_type,
-                c.tags, c.colors FROM resources r
-                JOIN users u ON r.author = u.u_id
+		// Messy query... to summarize:
+		// if user wants saved resources we add a JOIN,
+		// if user is filtering tags we add a AND clause to the last JOIN
+		resources = await db.query(
+			`SELECT vc.vote, u.username, u.profile_pic, u.u_id, 
+                COALESCE(rv.votes, 0) AS votes, r.title, 
+                r.r_id, r.link, r.published_date, r.edited,  r.thumbnail, r.resource_type,
+                c.tags, c.colors 
+                FROM resources r 
+                ${
+					show === 'saved'
+						? `JOIN saved_resources sr
+						ON sr.r_id = r.r_id AND sr.u_id = $1`
+						: ''
+				}
+                JOIN users u ON r.author = u.u_id 
+                	${show === 'submitted' ? `AND r.author = $1` : ''}
                 LEFT JOIN (
-                SELECT c.r_id, array_agg(t.title) AS tags, array_agg(t.color) AS colors
-                FROM tagconnections c
-                JOIN tags t ON t.tag_id = c.tag_id
-                GROUP BY c.r_id) c using (r_id) 
-                LEFT JOIN (SELECT r_id, SUM(vote) AS votes FROM resourcevotes GROUP BY r_id) rv
+					SELECT c.r_id, 
+					array_agg(t.title) AS tags, 
+					array_agg(t.color) AS colors 
+					FROM tagconnections c 
+					JOIN tags t 
+					ON t.tag_id = c.tag_id 
+					GROUP BY c.r_id
+                ) c ON c.r_id = r.r_id
+                LEFT JOIN (SELECT r_id, SUM(vote) 
+                AS votes FROM resourcevotes GROUP BY r_id) rv
                 ON rv.r_id = r.r_id
                 LEFT JOIN resourcevotes vc ON vc.r_id = r.r_id AND vc.u_id = $1 
+                ${
+					filter !== 'none'
+						? 'AND vc.u_id = $1 WHERE $4 = ANY (tags)'
+						: ''
+				}
                 ORDER BY ${order1}, ${order2} LIMIT $2 OFFSET $3`,
-				[userId, perPage, (page - 1) * perPage],
-			);
-		} else {
-			resources = await db.query(
-				`SELECT vc.vote, u.username, u.profile_pic, u.u_id, 
-                COALESCE(rv.votes, 0) AS votes, r.title, r.r_id, r.link, r.published_date, r.edited,  r.thumbnail, r.resource_type,
-                c.tags, c.colors FROM resources r 
-                JOIN users u ON r.author = u.u_id 
-                JOIN (
-                SELECT c.r_id, array_agg(t.title) AS tags, array_agg(t.color) AS colors 
-                FROM tagconnections c 
-                JOIN tags t ON t.tag_id = c.tag_id 
-                GROUP BY c.r_id) c using (r_id) 
-                LEFT JOIN resourcevotes vc ON vc.r_id = r.r_id 
-                LEFT JOIN (SELECT r_id, SUM(vote) AS votes FROM resourcevotes GROUP BY r_id) rv
-                ON rv.r_id = r.r_id
-                AND vc.u_id = $2 WHERE $1 = ANY (tags) 
-                ORDER BY ${order1}, ${order2} LIMIT $3 OFFSET $4`,
-				[filter, userId, perPage, (page - 1) * perPage],
-			);
-		}
 
+			filter === 'none'
+				? [userId, perPage, (page - 1) * perPage]
+				: [userId, perPage, (page - 1) * perPage, filter],
+		);
 		resources = resources.rows.map((r) => {
 			return { ...r, owner: Number(r.u_id) === Number(userId) };
 		});
