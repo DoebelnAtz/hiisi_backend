@@ -13,16 +13,42 @@ router.get('/:rid', resourceController.getResourceById);
 router.post(
 	'/add_resource',
 	[
-		check('userId')
+		check('title')
 			.not()
-			.isEmpty()
-			.isNumeric(),
-		check('taskId')
+			.isEmpty(),
+		check('link')
+			.not()
+			.isEmpty(),
+		check('description')
+			.not()
+			.isEmpty(),
+		check('type')
+			.not()
+			.isEmpty(),
+	],
+	resourceController.createResource,
+);
+
+router.post(
+	'/save_resource',
+	[
+		check('rId')
 			.not()
 			.isEmpty()
 			.isNumeric(),
 	],
-	resourceController.createResource,
+	resourceController.saveResource,
+);
+
+router.delete(
+	'/save_resource',
+	[
+		check('rId')
+			.not()
+			.isEmpty()
+			.isNumeric(),
+	],
+	resourceController.unSaveResource,
 );
 
 router.post(
@@ -55,7 +81,8 @@ router.post(
 	resourceController.voteResource,
 );
 
-router.delete('/delete_resource',
+router.delete(
+	'/delete_resource',
 	[
 		check('userId')
 			.not()
@@ -65,18 +92,24 @@ router.delete('/delete_resource',
 			.not()
 			.isEmpty()
 			.isNumeric(),
-	], resourceController.deleteResource);
+	],
+	resourceController.deleteResource,
+);
 
-router.delete('/delete_tag',[
-	check('tagId')
-		.not()
-		.isEmpty()
-		.isNumeric(),
-	check('rId')
-		.not()
-		.isEmpty()
-		.isNumeric(),
-]	, resourceController.deleteTagFromResource);
+router.delete(
+	'/delete_tag',
+	[
+		check('tagId')
+			.not()
+			.isEmpty()
+			.isNumeric(),
+		check('rId')
+			.not()
+			.isEmpty()
+			.isNumeric(),
+	],
+	resourceController.deleteTagFromResource,
+);
 
 router.put(
 	'/update_resource',

@@ -46,20 +46,17 @@ const getResources = async (req, res) => {
 	const perPage = 14;
 	try {
 		// Messy query... to summarize:
-		// if user wants saved resources we add a JOIN,
+		// if user wants saved resources we use JOIN else LEFT JOIN,
 		// if user is filtering tags we add a AND clause to the last JOIN
 		resources = await db.query(
-			`SELECT vc.vote, u.username, u.profile_pic, u.u_id, 
+			`SELECT vc.vote, u.username, u.profile_pic, u.u_id, u.u_id, sr.u_id IS NOT NULL AS saved,
                 COALESCE(rv.votes, 0) AS votes, r.title, 
                 r.r_id, r.link, r.published_date, r.edited,  r.thumbnail, r.resource_type,
                 c.tags, c.colors 
                 FROM resources r 
-                ${
-					show === 'saved'
-						? `JOIN saved_resources sr
-						ON sr.r_id = r.r_id AND sr.u_id = $1`
-						: ''
-				}
+     			${show === 'saved' ? 'JOIN ' : 'LEFT JOIN '}
+						saved_resources sr
+						ON sr.r_id = r.r_id AND sr.u_id = $1
                 JOIN users u ON r.author = u.u_id 
                 	${show === 'submitted' ? `AND r.author = $1` : ''}
                 LEFT JOIN (
@@ -97,6 +94,73 @@ const getResources = async (req, res) => {
 		});
 	}
 	res.json(resources);
+};
+
+const saveResource = async (req, res) => {
+	const errors = validationResult(req);
+	if (!errors.isEmpty()) {
+		return res.status(422).json({
+			status: 'error',
+			message: 'Invalid input please try again.',
+		});
+	}
+	const { rId } = req.body;
+	const senderId = req.decoded.u_id;
+	const client = await db.connect();
+
+	try {
+		await client.query('BEGIN');
+		await client.query(
+			`INSERT INTO saved_resources (r_id, u_id)
+			VALUES ($1, $2)`,
+			[rId, senderId],
+		);
+		await client.query('COMMIT');
+	} catch (e) {
+		await client.query('ROLLBACK');
+		errorLogger.error('Failed to save resource: ' + e);
+		return res.status(500).json({
+			success: false,
+			status: 'error',
+			message: 'Failed to save resource.',
+		});
+	} finally {
+		client.release();
+	}
+	res.json({ success: true });
+};
+
+const unSaveResource = async (req, res) => {
+	const errors = validationResult(req);
+	if (!errors.isEmpty()) {
+		return res.status(422).json({
+			status: 'error',
+			message: 'Invalid input please try again.',
+		});
+	}
+	const { rId } = req.body;
+	const senderId = req.decoded.u_id;
+	const client = await db.connect();
+
+	try {
+		await client.query('BEGIN');
+		await client.query(
+			`DELETE FROM saved_resources WHERE r_id = $1 AND u_id = $2`,
+			[rId, senderId],
+		);
+		await client.query('COMMIT');
+	} catch (e) {
+		await client.query('ROLLBACK');
+		errorLogger.error('Failed to un-save resource: ' + e);
+		return res.status(500).json({
+			success: false,
+			status: 'error',
+			message: 'Failed to un-save resource.',
+		});
+	} finally {
+		client.release();
+	}
+	res.json({ success: true });
 };
 
 const deleteTagFromResource = async (req, res) => {
@@ -207,6 +271,13 @@ const getResourceById = async (req, res) => {
 };
 
 const createResource = async (req, res) => {
+	const errors = validationResult(req);
+	if (!errors.isEmpty()) {
+		return res.status(422).json({
+			status: 'error',
+			message: 'Invalid input please try again.',
+		});
+	}
 	const client = await db.connect();
 	const { title, description, link, type } = req.body;
 	const userId = req.decoded.u_id;
@@ -514,3 +585,7 @@ exports.searchTags = searchTags;
 exports.updateResource = updateResource;
 
 exports.voteResource = voteResource;
+
+exports.saveResource = saveResource;
+
+exports.unSaveResource = unSaveResource;
