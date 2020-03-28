@@ -321,7 +321,7 @@ const getProjects = async (req, res) => {
 	let projects;
 	try {
 		projects = await db.query(
-			`SELECT p.title, p.published_date, u.username, p.creator, 
+			`SELECT p.title, p.published_date, u.username, p.creator, p.private,
 			COALESCE(vs.votes, 0) AS votes, p.project_id, v.vote, collab.collaborators
 			FROM projects p JOIN users u ON p.creator = u.u_id 
 			LEFT JOIN (SELECT vote, project_id FROM projectvotes WHERE u_id = $1) v 
