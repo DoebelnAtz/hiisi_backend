@@ -315,6 +315,19 @@
     required: userId, taskId
     
     
+    POST /save_resource
+    
+    save resource
+    
+    required: rId
+    
+    
+    DELETE /save_resource
+        
+    un-save resource
+        
+    required: rId
+    
     
     DELETE: /delete_resource
     
