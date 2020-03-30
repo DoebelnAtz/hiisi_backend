@@ -213,6 +213,8 @@ const deleteComment = async (req, res) => {
 	res.json({ success: true });
 };
 
-exports.deleteComment = deleteComment;
-exports.getCommentThreadById = getCommentThreadById;
-exports.createComment = createComment;
+module.exports = {
+	deleteComment,
+	getCommentThreadById,
+	createComment,
+};

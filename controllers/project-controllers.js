@@ -888,19 +888,21 @@ const deleteProject = async (req, res) => {
 	res.json({ success: true });
 };
 
-exports.deleteProject = deleteProject;
-exports.addTaskToBoard = addTaskToBoard;
-exports.updateTask = updateTask;
-exports.createProject = createProject;
-exports.updateTaskPosition = updateTaskPosition;
-exports.getBoardById = getBoardById;
-exports.getProjects = getProjects;
-exports.getProjectById = getProjectById;
-exports.getTaskById = getTaskById;
-exports.voteProject = voteProject;
-exports.updateProject = updateProject;
-exports.deleteTask = deleteTask;
-exports.addCollaboratorToTask = addCollaboratorToTask;
-exports.updateColumn = updateColumn;
-exports.addProjectCollaborator = addProjectCollaborator;
-exports.getProjectCollaborators = getProjectCollaborators;
+module.exports = {
+	deleteProject,
+	addTaskToBoard,
+	updateTask,
+	createProject,
+	updateTaskPosition,
+	getBoardById,
+	getProjects,
+	getProjectById,
+	getTaskById,
+	voteProject,
+	updateProject,
+	deleteTask,
+	addCollaboratorToTask,
+	updateColumn,
+	addProjectCollaborator,
+	getProjectCollaborators,
+};

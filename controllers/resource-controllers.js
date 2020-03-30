@@ -568,24 +568,16 @@ const voteResource = async (req, res) => {
 	res.json({ success: true });
 };
 
-exports.getResources = getResources;
-
-exports.getResourceById = getResourceById;
-
-exports.createResource = createResource;
-
-exports.deleteResource = deleteResource;
-
-exports.deleteTagFromResource = deleteTagFromResource;
-
-exports.addTagToResource = addTagToResource;
-
-exports.searchTags = searchTags;
-
-exports.updateResource = updateResource;
-
-exports.voteResource = voteResource;
-
-exports.saveResource = saveResource;
-
-exports.unSaveResource = unSaveResource;
+module.exports = {
+	getResources,
+	getResourceById,
+	createResource,
+	deleteResource,
+	deleteTagFromResource,
+	addTagToResource,
+	searchTags,
+	updateResource,
+	voteResource,
+	saveResource,
+	unSaveResource,
+};

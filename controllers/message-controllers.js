@@ -8,7 +8,7 @@ const getMessagesByThreadId = async (req, res) => {
 	let messages;
 	try {
 		messages = await db.query(
-            `SELECT * FROM (SELECT username, u_id, profile_pic, m.m_id, m.message, m.time_sent 
+			`SELECT * FROM (SELECT username, u_id, profile_pic, m.m_id, m.message, m.time_sent 
 				FROM messages m JOIN threads t ON  t.t_id = m.thread
             JOIN users on users.u_id = m.sender WHERE m.thread = $1 ORDER BY m.time_sent DESC LIMIT $2 OFFSET $3) AS mes ORDER BY mes.time_sent ASC`,
 			[threadId, 20, (page - 1) * 20],
@@ -44,13 +44,17 @@ const getMessagesByThreadId = async (req, res) => {
 	}
 	try {
 		let user = await db.query(
-			`UPDATE online_users SET last_updated = NOW() WHERE u_id = $1 RETURNING u_id`, [req.decoded.u_id])
+			`UPDATE online_users SET last_updated = NOW() WHERE u_id = $1 RETURNING u_id`,
+			[req.decoded.u_id],
+		);
 	} catch (e) {
-		errorLogger.error(`Failed to update online user while retrieving messages: ${e}`);
+		errorLogger.error(
+			`Failed to update online user while retrieving messages: ${e}`,
+		);
 		return res.status().json({
 			status: 'error',
-			message: 'Failed to get messages'
-		})
+			message: 'Failed to get messages',
+		});
 	}
 	res.json({ title: isAllowed.rows[0].thread_name, messages });
 };
@@ -101,13 +105,17 @@ const getThreadsByUserId = async (req, res) => {
 	}
 	try {
 		let user = await db.query(
-			`UPDATE online_users SET last_updated = NOW() WHERE u_id = $1 RETURNING u_id`, [req.decoded.u_id])
+			`UPDATE online_users SET last_updated = NOW() WHERE u_id = $1 RETURNING u_id`,
+			[req.decoded.u_id],
+		);
 	} catch (e) {
-		errorLogger.error(`Failed to update online user while retrieving messages: ${e}`);
+		errorLogger.error(
+			`Failed to update online user while retrieving messages: ${e}`,
+		);
 		return res.status().json({
 			status: 'error',
-			message: 'Failed to get messages'
-		})
+			message: 'Failed to get messages',
+		});
 	}
 	res.json(threads);
 };
@@ -220,8 +228,7 @@ const addUserToThread = async (req, res) => {
 	res.json(addedUser);
 };
 
-
-const deleteThread = async (req,res) => {
+const deleteThread = async (req, res) => {
 	const errors = validationResult(req);
 	if (!errors.isEmpty()) {
 		return res.status(422).json({
@@ -234,51 +241,67 @@ const deleteThread = async (req,res) => {
 	let fullDelete = false;
 	let deleteTarget;
 	try {
-	    deleteTarget = await db.query(
-	        `SELECT thread_id, user_id FROM threads JOIN threadconnections 
+		deleteTarget = await db.query(
+			`SELECT thread_id, user_id FROM threads JOIN threadconnections 
 	        ON thread_id = t_id 
 	        WHERE thread_id = $1`,
-			[targetId,]);
-	    deleteTarget = deleteTarget.rows;
-	    if (!deleteTarget.length) {
-			errorLogger.error(`Failed to find thread to delete: failed to find thread with provided id`);
+			[targetId],
+		);
+		deleteTarget = deleteTarget.rows;
+		if (!deleteTarget.length) {
+			errorLogger.error(
+				`Failed to find thread to delete: failed to find thread with provided id`,
+			);
 			return res.status(404).json({
 				status: 'error',
-				message: 'Failed to find thread with provided id'
-			})
-		} else if (!deleteTarget.find(thread => thread.user_id === senderId)) {
-			errorLogger.error(`Failed to find thread to delete: unauthorized sender`);
+				message: 'Failed to find thread with provided id',
+			});
+		} else if (
+			!deleteTarget.find((thread) => thread.user_id === senderId)
+		) {
+			errorLogger.error(
+				`Failed to find thread to delete: unauthorized sender`,
+			);
 			return res.status(401).json({
 				status: 'error',
-				message: 'Unauthorized sender'
-			})
+				message: 'Unauthorized sender',
+			});
 		}
-	    if (deleteTarget.length === 1) {
-	    	fullDelete = true;
+		if (deleteTarget.length === 1) {
+			fullDelete = true;
 		}
 	} catch (e) {
-	    errorLogger.error(`Failed to find thread to delete: ${e}`);
-	    return res.status(500).json({
-	        status: 'error',
-	        message: 'Failed to find thread to delete'
-	    })
+		errorLogger.error(`Failed to find thread to delete: ${e}`);
+		return res.status(500).json({
+			status: 'error',
+			message: 'Failed to find thread to delete',
+		});
 	}
 
 	const client = await db.connect();
 
 	try {
 		await client.query('BEGIN');
-		await client.query(`
+		await client.query(
+			`
 				DELETE FROM threadconnections WHERE thread_id = $1 AND user_id = $2
-			`, [targetId, senderId]);
+			`,
+			[targetId, senderId],
+		);
 
 		if (fullDelete) {
-			await client.query(`
+			await client.query(
+				`
 				DELETE FROM messages WHERE thread = $1
-			`, [targetId]);
-			await client.query(`
+			`,
+				[targetId],
+			);
+			await client.query(
+				`
 				DELETE FROM threads WHERE t_id = $1
-			`, [targetId]);
+			`,
+				[targetId],
+			);
 		}
 		await client.query('COMMIT');
 	} catch (e) {
@@ -291,16 +314,14 @@ const deleteThread = async (req,res) => {
 	} finally {
 		client.release();
 	}
-	res.json({success: true})
+	res.json({ success: true });
 };
 
-exports.getMessagesByThreadId = getMessagesByThreadId;
-exports.getThreadsByUserId = getThreadsByUserId;
-exports.createNewThread = createNewThread;
-exports.addUserToThread = addUserToThread;
-exports.getUsersInThread = getUsersInThread;
-exports.deleteThread = deleteThread;
-
-
-
-
+module.exports = {
+	getMessagesByThreadId,
+	getThreadsByUserId,
+	createNewThread,
+	addUserToThread,
+	getUsersInThread,
+	deleteThread,
+};

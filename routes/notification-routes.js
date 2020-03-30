@@ -4,19 +4,10 @@ const router = express.Router();
 
 const notificationController = require('../controllers/notification-controllers');
 
-router.get(
-    '/users/:uid',
-    notificationController.getUserNotifications
-);
+router.get('/users/:uid', notificationController.getUserNotifications);
 
-router.post(
-    '/create_notification',
-    notificationController.CreateNotification
-);
+router.post('/create_notification', notificationController.createNotification);
 
-router.put(
-    '/read_notification',
-    notificationController.readNotification
-);
+router.put('/read_notification', notificationController.readNotification);
 
 module.exports = router;

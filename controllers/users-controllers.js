@@ -306,11 +306,12 @@ const getAllByUserId = async (req, res) => {
 	return res.json(userSubmissions);
 };
 
-exports.getMe = getMe;
-exports.getOnlineUsers = getOnlineUsers;
-exports.getUserFriends = getUserFriends;
-exports.getUsers = getUsers;
-exports.getUserById = getUserById;
-
-exports.getAllByUserId = getAllByUserId;
-exports.searchUsers = searchUsers;
+module.exports = {
+	getMe,
+	getOnlineUsers,
+	getUserFriends,
+	getUsers,
+	getUserById,
+	getAllByUserId,
+	searchUsers,
+};

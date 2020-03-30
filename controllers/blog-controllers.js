@@ -365,10 +365,12 @@ const deleteBlog = async (req, res) => {
 	res.json({ success: true });
 };
 
-exports.getBlogs = getBlogs;
-exports.getBlogById = getBlogById;
-exports.updateBlog = updateBlog;
-exports.getBlogsByUserId = getBlogsByUserId;
-exports.createBlog = createBlog;
-exports.voteBlog = voteBlog;
-exports.deleteBlog = deleteBlog;
+module.exports = {
+	getBlogs,
+	getBlogById,
+	getBlogsByUserId,
+	updateBlog,
+	createBlog,
+	voteBlog,
+	deleteBlog,
+};
