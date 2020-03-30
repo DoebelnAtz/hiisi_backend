@@ -94,7 +94,9 @@ const signUp = async (req, res) => {
 				userinfo.image_url,
 				userinfo.cursus_users[0].level,
 				userinfo.cursus_users[0].grade,
-				userinfo.pool_month + ' ' + userinfo.pool_year,
+				userinfo['staff?']
+					? 'Bocal'
+					: userinfo.pool_month + ' ' + userinfo.pool_year,
 				userinfo.wallet,
 				userinfo.location,
 				userinfo.correction_point,
