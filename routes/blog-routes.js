@@ -73,4 +73,15 @@ router.delete(
 	blogsController.deleteBlog,
 );
 
+router.delete(
+	'/delete_comment',
+	[
+		check('commentId')
+			.not()
+			.isEmpty()
+			.isNumeric(),
+	],
+	commentController.deleteComment,
+);
+
 module.exports = router;

@@ -13,9 +13,9 @@ const getCommentThreadById = async (req, res) => {
 	try {
 		// could be optimized by returning necessary comment data through comments JOIN voted..., keep as is for now..
 		sender = await db.query(
-			'SELECT comment_id, vote ' +
-				'FROM users join votedcomments ON votedcomments.user_id = users.u_id ' +
-				'WHERE users.u_id = $1',
+			`SELECT comment_id, vote
+				FROM users LEFT JOIN votedcomments ON votedcomments.user_id = users.u_id
+				WHERE users.u_id = $1`,
 			[senderId],
 		);
 		sender = sender.rows.map((row) => {
@@ -42,14 +42,15 @@ const getCommentThreadById = async (req, res) => {
 				1 as depth, c.comment_date, u.username, u.u_id, u.profile_pic
 				FROM comments c JOIN commentthreads t
 				ON c.parentthread = t.t_id 
-				JOIN users u ON c.author = u.u_id
+				LEFT JOIN users u ON c.author = u.u_id
 				WHERE t.t_id = $1
 				UNION ALL
 				SELECT e.commentcontent, e.c_id, e.parentthread, e.childthread, 
 				cmts.depth + 1 as depth, e.comment_date,
 				eu.username, eu.u_id, eu.profile_pic
 				FROM comments e JOIN commentthreads et 
-				ON e.parentthread = et.t_id JOIN users eu ON e.author = eu.u_id
+				ON e.parentthread = et.t_id 
+				LEFT JOIN users eu ON e.author = eu.u_id
 				JOIN cmts ON e.parentthread = cmts.childthread AND depth < 10
 			) SELECT * FROM cmts ORDER BY comment_date ASC`,
 			[tid],
@@ -164,7 +165,6 @@ const deleteComment = async (req, res) => {
         `,
 			[commentId],
 		);
-		commentToDelete = commentToDelete.rows;
 		if (!commentToDelete.rows.length) {
 			errorLogger.error('Failed to find comment with the provided Id');
 			return res.status(404).json({
@@ -172,6 +172,7 @@ const deleteComment = async (req, res) => {
 				message: 'Failed to find comment with the provided Id',
 			});
 		} else {
+			commentToDelete = commentToDelete.rows;
 			commentToDelete = commentToDelete[0];
 		}
 		if (commentToDelete.author !== req.decoded.u_id) {
