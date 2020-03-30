@@ -104,6 +104,7 @@ const getBlogById = async (req, res) => {
 		blog = blog.rows[0];
 		blog.owner = blog.u_id === req.decoded.u_id;
 	} catch (e) {
+		errorLogger.error(`Failed to get blog: ${e}`);
 		return res.status(500).json({
 			status: 'error',
 			message: 'Failed to get blog',
@@ -123,9 +124,10 @@ const getBlogsByUserId = async (req, res) => {
 		);
 		userWithBlogs = userWithBlogs.rows;
 	} catch (e) {
+		errorLogger.error(`Failed to get blog by user id: ${e}`);
 		return res.status(500).json({
 			status: 'error',
-			message: 'Failed to get blog by user id',
+			message: 'Failed to get post by user id',
 		});
 	}
 
@@ -141,7 +143,7 @@ const createBlog = async (req, res) => {
 		});
 	}
 
-	const { title, authorId, content, published_date } = req.body;
+	const { title, authorId, content } = req.body;
 
 	let user;
 	try {
@@ -151,11 +153,20 @@ const createBlog = async (req, res) => {
 		);
 		user = user.rows[0];
 	} catch (e) {
-		console.log(e);
-		return res.status(500).json({
-			status: 'error',
-			message: 'Failed to create blog, please try again later',
-		});
+		errorLogger.error(`Failed to create blog: ${e}`);
+		if (e.code === '23505') {
+			res.status(400).json({
+				success: false,
+				status: 'error',
+				message: 'Title already exists',
+			});
+		} else {
+			return res.status(500).json({
+				success: false,
+				status: 'error',
+				message: 'Failed to create post.',
+			});
+		}
 	}
 	if (!user) {
 		return res.status(404).json({
@@ -174,19 +185,28 @@ const createBlog = async (req, res) => {
 		);
 		res = res.rows[0];
 		createdBlog = await client.query(
-			`INSERT INTO blogs(title, content, author, commentthread, published_date)
-				VALUES($1, $2, $3, $4, $5) 
+			`INSERT INTO blogs(title, content, author, commentthread)
+				VALUES($1, $2, $3, $4) 
 				RETURNING b_id, title, content, author, commentthread, votes, published_date`,
-			[title, content, authorId, res.t_id, published_date],
+			[title, content, authorId, res.t_id],
 		);
 		await client.query('COMMIT');
 	} catch (e) {
 		await client.query('ROLLBACK');
-		console.log(e);
-		return res.status(500).json({
-			status: 'error',
-			message: 'Failed to create Blog Post, please try again later.',
-		});
+		errorLogger.error(`Failed to create blog: ${e}`);
+		if (e.code === '23505') {
+			res.status(400).json({
+				success: false,
+				status: 'error',
+				message: 'Title already exists',
+			});
+		} else {
+			return res.status(500).json({
+				success: false,
+				status: 'error',
+				message: 'Failed to add Resource to DB.',
+			});
+		}
 	} finally {
 		client.release();
 	}
