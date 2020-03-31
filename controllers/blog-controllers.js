@@ -1,7 +1,6 @@
 const { validationResult } = require('express-validator');
 const { errorLogger } = require('../logger');
 const db = require('../postgres/queries');
-const { posts, getFields, users, postVotes } = require('../db-utils/db-tables');
 
 const getBlogs = async (req, res) => {
 	let sender;
@@ -55,8 +54,7 @@ const getBlogs = async (req, res) => {
 	const perPage = 14;
 	const userId = req.decoded.u_id;
 	let blogs;
-	// trying out ways to improve query code
-	// this is not an improvement...
+
 	let query = `
 		SELECT 
 			b.b_id, b.title, b.content, b.author, b.published_date, b.edited, b.commentthread,

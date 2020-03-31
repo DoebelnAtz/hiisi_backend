@@ -31,6 +31,11 @@ const searchAll = async (req, res) => {
 			message: 'Failed to search database',
 		});
 	}
+
+	// First, we get all results that start with the query, if it returns less than 10 we
+	// get anything containing the query (and filter out duplicates), because searching for
+	// items that start with the query is much faster due to postgres btree indexing.
+
 	if (result.length < 10) {
 		try {
 			let matched = await db.query(

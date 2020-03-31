@@ -3,7 +3,6 @@ const { validationResult } = require('express-validator');
 const bcrypt = require('bcryptjs');
 const db = require('../postgres/queries');
 const { errorLogger } = require('../logger');
-const dbUsers = require('../db-utils/db-user');
 let jwt = require('jsonwebtoken');
 let config = require('../config');
 const users = require('./../users');

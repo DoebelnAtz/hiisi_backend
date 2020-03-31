@@ -22,8 +22,10 @@ const addTaskToBoard = async (req, res) => {
 			INSERT INTO commentthreads DEFAULT VALUES RETURNING *
 		`);
 		createdTask = await client.query(
-			'INSERT INTO tasks (title, column_id, commentthread) VALUES ($1, $2, $3)' +
-				'RETURNING task_id, title, priority, description, status',
+			`INSERT INTO 
+			tasks (title, column_id, commentthread) 
+			VALUES ($1, $2, $3)
+			RETURNING task_id, title, priority, description, status`,
 			[taskTitle, taskColumnId, commentThread.rows[0].t_id],
 		);
 		createdTask = createdTask.rows[0];
@@ -73,7 +75,7 @@ const createProject = async (req, res) => {
 		});
 	}
 	const userId = req.decoded.u_id;
-	const { title, link, description, private } = req.body;
+	const { title, link, description, private: privateProject } = req.body;
 
 	let createdProject;
 	const client = await db.connect();
@@ -85,7 +87,9 @@ const createProject = async (req, res) => {
 		);
 		commentthread = commentthread.rows[0];
 		let chatthread = await client.query(
-			`INSERT INTO threads (thread_name, project_thread) VALUES ($1, true) 
+			`INSERT INTO 
+			threads (thread_name, project_thread)
+			 VALUES ($1, true) 
 			RETURNING t_id`,
 			[title],
 		);
@@ -101,7 +105,7 @@ const createProject = async (req, res) => {
 				chatthread.t_id,
 				commentthread.t_id,
 				userId,
-				private,
+				privateProject,
 			],
 		);
 		createdProject = createdProject.rows[0];
@@ -193,11 +197,10 @@ const addCollaboratorToTask = async (req, res) => {
 	let collaborators;
 	try {
 		collaborators = await db.query(
-			'' +
-				'SELECT t.task_id, u.username, u.profile_pic, u.u_id FROM tasks t ' +
-				'JOIN taskcollaborators c ON c.task_id = t.task_id ' +
-				'JOIN users u ON c.u_id = u.u_id ' +
-				'WHERE t.task_id = $1',
+			`SELECT t.task_id, u.username, u.profile_pic, u.u_id FROM tasks t 
+				JOIN taskcollaborators c ON c.task_id = t.task_id 
+				JOIN users u ON c.u_id = u.u_id 
+				WHERE t.task_id = $1`,
 			[taskId],
 		);
 		collaborators = collaborators.rows;

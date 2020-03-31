@@ -21,25 +21,20 @@ const updateUsers = async () => {
 		for (var i = 0; i < users.length; i++) {
 			let userinfo = await api.intraApi('/users/' + users[i].intraid);
 			await utils.sleep(1000);
-			let coalitioninfo = await api.intraApi(
-				'/users/' + users[i].intraid + '/coalitions_users',
-			);
 			await utils.sleep(1000);
 			accessLogger.info(JSON.stringify(users[i]));
 			await client.query(
-				'UPDATE users SET ' +
-					'profile_pic = $1, ' +
-					'level = $2,' +
-					'grade = $3,' +
-					'class_of = $4,' +
-					'wallet = $5,' +
-					'location = $6,' +
-					'correction_points = $7,' +
-					'achievement_points = $8,' +
-					'active = $9, ' +
-					'coalition_rank = $10, ' +
-					'coalition_points = $11 ' +
-					' WHERE u_id = $12',
+				`UPDATE users SET
+					profile_pic = $1,
+					level = $2,
+					grade = $3,
+					class_of = $4,
+					wallet = $5,
+					location = $6,
+					correction_points = $7,
+					achievement_points = $8,
+					active = $9,
+					WHERE u_id = $10`,
 				[
 					userinfo.image_url,
 					userinfo.cursus_users[0].level,
@@ -52,8 +47,6 @@ const updateUsers = async () => {
 					userinfo.correction_point,
 					utils.countAchievementPoints(userinfo.achievements),
 					!!userinfo.location,
-					coalitioninfo[0].rank,
-					coalitioninfo[0].score,
 					users[i].u_id,
 				],
 			);
