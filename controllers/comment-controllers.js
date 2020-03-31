@@ -10,28 +10,6 @@ const getCommentThreadById = async (req, res) => {
 
 	const { senderId } = req.decoded.u_id;
 
-	try {
-		// could be optimized by returning necessary comment data through comments JOIN voted..., keep as is for now..
-		sender = await db.query(
-			`SELECT comment_id, vote
-				FROM users LEFT JOIN votedcomments ON votedcomments.user_id = users.u_id
-				WHERE users.u_id = $1`,
-			[senderId],
-		);
-		sender = sender.rows.map((row) => {
-			return {
-				c_id: row.comment_id,
-				vote: row.vote,
-			};
-		});
-	} catch (e) {
-		errorLogger.error('Failed to retrieve blogs: ' + e);
-		return res.status(500).json({
-			status: 'error',
-			message: 'Failed to get blogs',
-		});
-	}
-
 	let commentThread;
 	// recursive comment query, adjust depth < x to set max depth
 	try {
