@@ -17,10 +17,6 @@ router.get('/users/:uid', blogsController.getBlogsByUserId);
 
 router.get('/commentthread/:tid', commentController.getCommentThreadById);
 
-router.delete('/comment/delete_comment', commentController.deleteComment);
-
-router.put('/update_blog', blogsController.updateBlog);
-
 router.post(
 	'/create_blog',
 	[
@@ -60,6 +56,22 @@ router.post(
 			.isEmpty(),
 	],
 	commentController.createComment,
+);
+
+router.put(
+	'/update_blog',
+	[
+		check('content')
+			.not()
+			.isEmpty(),
+		check('title')
+			.not()
+			.isEmpty(),
+		check('blogId')
+			.not()
+			.isEmpty(),
+	],
+	blogsController.updateBlog,
 );
 
 router.delete(

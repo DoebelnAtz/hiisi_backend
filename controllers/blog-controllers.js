@@ -114,13 +114,12 @@ const getBlogById = async (req, res) => {
 
 const getBlogsByUserId = async (req, res) => {
 	const userId = req.params.uid;
-	let userWithBlogs;
+	let blogs;
 	try {
-		userWithBlogs = await db.query(
-			'SELECT * FROM blogs WHERE author = $1',
-			[userId],
-		);
-		userWithBlogs = userWithBlogs.rows;
+		blogs = await db.query('SELECT * FROM blogs WHERE author = $1', [
+			userId,
+		]);
+		blogs = blogs.rows;
 	} catch (e) {
 		errorLogger.error(`Failed to get blog by user id: ${e}`);
 		return res.status(500).json({
@@ -129,7 +128,7 @@ const getBlogsByUserId = async (req, res) => {
 		});
 	}
 
-	res.json({ blogs: userWithBlogs.map((blog) => blog) });
+	res.json(blogs);
 };
 
 const createBlog = async (req, res) => {

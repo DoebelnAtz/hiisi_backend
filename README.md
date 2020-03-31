@@ -24,7 +24,7 @@
 
     signup
     
-    required: username, password
+    required: username (>7), password
     
     
 
@@ -35,6 +35,13 @@
     required: username, password
 
 
+
+    PUT: /change_password
+    
+    change password
+    
+    required: username, currentPassword, newPassword
+    
 # blog
 
     GET: /
@@ -50,7 +57,7 @@
 
     GET: /:bid
     
-    get blog by 
+    get blog by id
     
     
 
@@ -82,6 +89,12 @@
     
     required: blogId, vote
     
+
+    PUT: /update_blog
+    
+    update blog title, content
+    
+    required: content, title, blogId
     
     
     DELETE: /delete_blog
@@ -89,6 +102,14 @@
     delete a post
     
     required: blogId
+    
+    
+    DELETE: /delete_comment
+    
+    delete a comment
+    
+    required: 
+    
     
 # projects
 

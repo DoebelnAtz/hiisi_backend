@@ -9,9 +9,9 @@ const getMessagesByThreadId = async (req, res) => {
 	let isAllowed;
 	try {
 		isAllowed = await db.query(
-			'SELECT thread_name from threadconnections JOIN threads ' +
-				'ON thread_id = t_id ' +
-				'WHERE user_id = $1 AND thread_id = $2',
+			`SELECT thread_name from threadconnections JOIN threads
+				ON thread_id = t_id
+				WHERE user_id = $1 AND thread_id = $2`,
 			[req.decoded.u_id, threadId],
 		);
 		if (!isAllowed.rows.length) {

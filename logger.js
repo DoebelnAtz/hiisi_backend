@@ -11,7 +11,7 @@ const accessLogger = createLogger({
 		new transports.File({
 			filename: './logs/access.log',
 			json: false,
-			maxsize: 2242880,
+			maxsize: 2000000, // 2 MB
 			maxFiles: 5,
 		}),
 		new transports.Console(),
@@ -29,7 +29,7 @@ const errorLogger = createLogger({
 		new transports.File({
 			filename: './logs/error.log',
 			json: false,
-			maxsize: 2242880,
+			maxsize: 20000000, // 2 MB
 			maxFiles: 5,
 		}),
 		new transports.Console(),
