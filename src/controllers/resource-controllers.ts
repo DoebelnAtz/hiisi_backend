@@ -6,7 +6,7 @@ const db = require('../postgres/queries');
 const urlMetadata = require('url-metadata');
 var URL = require('url').URL;
 
-const getResources = catchErrors(async (req, res) => {
+export const getResources = catchErrors(async (req, res) => {
 	const userId = req.decoded.u_id;
 
 	const page = req.query.page || 1;
@@ -81,7 +81,7 @@ const getResources = catchErrors(async (req, res) => {
 	res.json(resources);
 }, 'Failed to get resources');
 
-const saveResource = catchErrors(async (req, res) => {
+export const saveResource = catchErrors(async (req, res) => {
 	const { rId } = req.body;
 	const senderId = req.decoded.u_id;
 	const client = await db.connect();
@@ -108,7 +108,7 @@ const saveResource = catchErrors(async (req, res) => {
 	res.json({ success: true });
 }, 'Failed to save resource');
 
-const unSaveResource = catchErrors(async (req, res) => {
+export const unSaveResource = catchErrors(async (req, res) => {
 	const { rId } = req.body;
 	const senderId = req.decoded.u_id;
 	const client = await db.connect();
@@ -135,7 +135,7 @@ const unSaveResource = catchErrors(async (req, res) => {
 	res.json({ success: true });
 }, 'Failed to un-save resource');
 
-const deleteTagFromResource = catchErrors(async (req, res) => {
+export const deleteTagFromResource = catchErrors(async (req, res) => {
 	const { tagId, rId } = req.body;
 	await db.query(
 		`DELETE from tagconnections WHERE tag_id = $1 
@@ -145,7 +145,7 @@ const deleteTagFromResource = catchErrors(async (req, res) => {
 	res.json({ success: true });
 }, 'Failed to delete tag from resource');
 
-const addTagToResource = catchErrors(async (req, res) => {
+export const addTagToResource = catchErrors(async (req, res) => {
 	const { tag, rId } = req.body;
 
 	const client = await db.connect();
@@ -172,7 +172,7 @@ const addTagToResource = catchErrors(async (req, res) => {
 	res.json(tag);
 }, 'Failed to add tag');
 
-const getResourceById = catchErrors(async (req, res) => {
+export const getResourceById = catchErrors(async (req, res) => {
 	const resourceId = req.params.rid;
 	const senderId = req.decoded.u_id;
 
@@ -200,7 +200,7 @@ const getResourceById = catchErrors(async (req, res) => {
 	res.json(resource);
 }, 'Failed to get tags for resource');
 
-const createResource = catchErrors(async (req, res) => {
+export const createResource = catchErrors(async (req, res) => {
 	const client = await db.connect();
 	const { title, description, link, type } = req.body;
 	const userId = req.decoded.u_id;
@@ -271,7 +271,7 @@ const createResource = catchErrors(async (req, res) => {
 	res.status(201).json(createdResource);
 }, 'Failed to create resource');
 
-const deleteResource = catchErrors(async (req, res) => {
+export const deleteResource = catchErrors(async (req, res) => {
 	const senderId = req.decoded.u_id;
 	const { resourceId, userId } = req.body;
 	let toDelete;
@@ -319,7 +319,7 @@ const deleteResource = catchErrors(async (req, res) => {
 	res.json({ success: true });
 }, 'Failed to delete resource');
 
-const searchTags = catchErrors(async (req, res) => {
+export const searchTags = catchErrors(async (req, res) => {
 	const query = req.query.q;
 	let limit = req.query.limit;
 	let tags;
@@ -332,7 +332,7 @@ const searchTags = catchErrors(async (req, res) => {
 	res.json(tags);
 }, 'Failed to find tags');
 
-const updateResource = catchErrors(async (req, res) => {
+export const updateResource = catchErrors(async (req, res) => {
 	let { resource } = req.body;
 
 	await db.query(
@@ -348,7 +348,7 @@ const updateResource = catchErrors(async (req, res) => {
 	res.json({ success: true });
 }, 'Failed to update resource');
 
-const voteResource = catchErrors(async (req, res) => {
+export const voteResource = catchErrors(async (req, res) => {
 	let { vote, resourceId } = req.body;
 	const userId = req.decoded.u_id;
 	let voteTarget;
@@ -429,17 +429,3 @@ const voteResource = catchErrors(async (req, res) => {
 	}
 	res.json({ success: true });
 }, 'Failed to vote resource');
-
-module.exports = {
-	getResources,
-	getResourceById,
-	createResource,
-	deleteResource,
-	deleteTagFromResource,
-	addTagToResource,
-	searchTags,
-	updateResource,
-	voteResource,
-	saveResource,
-	unSaveResource,
-};

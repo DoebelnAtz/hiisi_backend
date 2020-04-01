@@ -50,7 +50,8 @@ router.post(
 	[
 		check('threadId')
 			.not()
-			.isEmpty(),
+			.isEmpty()
+			.isNumeric(),
 		check('content')
 			.not()
 			.isEmpty(),
