@@ -1,11 +1,12 @@
-const { validationResult } = require('express-validator');
+import { catchErrors } from '../errors/catchErrors';
+import CustomError from '../errors/customError';
+import { errorLogger } from '../logger';
 
 const db = require('../postgres/queries');
-const { errorLogger, accessLogger } = require('../logger');
 const urlMetadata = require('url-metadata');
 var URL = require('url').URL;
 
-const getResources = async (req, res) => {
+const getResources = catchErrors(async (req, res) => {
 	const userId = req.decoded.u_id;
 
 	const page = req.query.page || 1;
@@ -17,11 +18,7 @@ const getResources = async (req, res) => {
 	// we are dangerously inserting values into a query so we need to make sure that
 	// the order parameter is correct
 	if (order !== 'popular' && order !== 'recent' && order !== 'title') {
-		errorLogger.error('Failed to get resources: invalid order parameter');
-		return res.status(422).json({
-			status: 'error',
-			message: 'Failed to get resources',
-		});
+		throw new CustomError('Invalid query parameters', 422);
 	}
 	let order1;
 	let order2;
@@ -44,66 +41,47 @@ const getResources = async (req, res) => {
 	}
 	let resources;
 	const perPage = 14;
-	try {
-		// Messy query... to summarize:
-		// if user wants saved resources we use JOIN else LEFT JOIN,
-		// if user is filtering tags we add a AND clause to the last JOIN
-		resources = await db.query(
-			`SELECT vc.vote, u.username, u.profile_pic, u.u_id, u.u_id, sr.u_id IS NOT NULL AS saved,
-                COALESCE(rv.votes, 0) AS votes, r.title, 
-                r.r_id, r.link, r.published_date, r.edited,  r.thumbnail, r.resource_type,
-                c.tags, c.colors 
-                FROM resources r 
-     			${show === 'saved' ? 'JOIN ' : 'LEFT JOIN '}
-						saved_resources sr
-						ON sr.r_id = r.r_id AND sr.u_id = $1
-                JOIN users u ON r.author = u.u_id 
-                	${show === 'submitted' ? `AND r.author = $1` : ''}
-                LEFT JOIN (
-					SELECT c.r_id, 
-					array_agg(t.title) AS tags, 
-					array_agg(t.color) AS colors 
-					FROM tagconnections c 
-					JOIN tags t 
-					ON t.tag_id = c.tag_id 
-					GROUP BY c.r_id
-                ) c ON c.r_id = r.r_id
-                LEFT JOIN (SELECT r_id, SUM(vote) 
-                AS votes FROM resourcevotes GROUP BY r_id) rv
-                ON rv.r_id = r.r_id
-                LEFT JOIN resourcevotes vc ON vc.r_id = r.r_id AND vc.u_id = $1 
-                ${
-					filter !== 'none'
-						? 'AND vc.u_id = $1 WHERE $4 = ANY (tags)'
-						: ''
-				}
-                ORDER BY ${order1}, ${order2} LIMIT $2 OFFSET $3`,
+	// Messy query... to summarize:
+	// if user wants saved resources we use JOIN else LEFT JOIN,
+	// if user is filtering tags we add a AND clause to the last JOIN
+	resources = await db.query(
+		`SELECT vc.vote, u.username, u.profile_pic, u.u_id, u.u_id, sr.u_id IS NOT NULL AS saved,
+			COALESCE(rv.votes, 0) AS votes, r.title, 
+			r.r_id, r.link, r.published_date, r.edited,  r.thumbnail, r.resource_type,
+			c.tags, c.colors 
+			FROM resources r 
+			${show === 'saved' ? 'JOIN ' : 'LEFT JOIN '}
+					saved_resources sr
+					ON sr.r_id = r.r_id AND sr.u_id = $1
+			JOIN users u ON r.author = u.u_id 
+				${show === 'submitted' ? `AND r.author = $1` : ''}
+			LEFT JOIN (
+				SELECT c.r_id, 
+				array_agg(t.title) AS tags, 
+				array_agg(t.color) AS colors 
+				FROM tagconnections c 
+				JOIN tags t 
+				ON t.tag_id = c.tag_id 
+				GROUP BY c.r_id
+			) c ON c.r_id = r.r_id
+			LEFT JOIN (SELECT r_id, SUM(vote) 
+			AS votes FROM resourcevotes GROUP BY r_id) rv
+			ON rv.r_id = r.r_id
+			LEFT JOIN resourcevotes vc ON vc.r_id = r.r_id AND vc.u_id = $1 
+			${filter !== 'none' ? 'AND vc.u_id = $1 WHERE $4 = ANY (tags)' : ''}
+			ORDER BY ${order1}, ${order2} LIMIT $2 OFFSET $3`,
 
-			filter === 'none'
-				? [userId, perPage, (page - 1) * perPage]
-				: [userId, perPage, (page - 1) * perPage, filter],
-		);
-		resources = resources.rows.map((r) => {
-			return { ...r, owner: Number(r.u_id) === Number(userId) };
-		});
-	} catch (e) {
-		errorLogger.error('Failed to get resources: ' + e);
-		return res.status(500).json({
-			status: 'error',
-			message: 'Failed to get resources',
-		});
-	}
+		filter === 'none'
+			? [userId, perPage, (page - 1) * perPage]
+			: [userId, perPage, (page - 1) * perPage, filter],
+	);
+	resources = resources.rows.map((r: any) => {
+		return { ...r, owner: Number(r.u_id) === Number(userId) };
+	});
 	res.json(resources);
-};
+}, 'Failed to get resources');
 
-const saveResource = async (req, res) => {
-	const errors = validationResult(req);
-	if (!errors.isEmpty()) {
-		return res.status(422).json({
-			status: 'error',
-			message: 'Invalid input please try again.',
-		});
-	}
+const saveResource = catchErrors(async (req, res) => {
 	const { rId } = req.body;
 	const senderId = req.decoded.u_id;
 	const client = await db.connect();
@@ -128,16 +106,9 @@ const saveResource = async (req, res) => {
 		client.release();
 	}
 	res.json({ success: true });
-};
+}, 'Failed to save resource');
 
-const unSaveResource = async (req, res) => {
-	const errors = validationResult(req);
-	if (!errors.isEmpty()) {
-		return res.status(422).json({
-			status: 'error',
-			message: 'Invalid input please try again.',
-		});
-	}
+const unSaveResource = catchErrors(async (req, res) => {
 	const { rId } = req.body;
 	const senderId = req.decoded.u_id;
 	const client = await db.connect();
@@ -152,63 +123,40 @@ const unSaveResource = async (req, res) => {
 	} catch (e) {
 		await client.query('ROLLBACK');
 		errorLogger.error('Failed to un-save resource: ' + e);
-		return res.status(500).json({
-			success: false,
-			status: 'error',
-			message: 'Failed to un-save resource.',
-		});
+		throw Error;
+		// return res.status(500).json({
+		// 	success: false,
+		// 	status: 'error',
+		// 	message: 'Failed to un-save resource.',
+		// });
 	} finally {
 		client.release();
 	}
 	res.json({ success: true });
-};
+}, 'Failed to un-save resource');
 
-const deleteTagFromResource = async (req, res) => {
-	const errors = validationResult(req);
-	if (!errors.isEmpty()) {
-		return res.status(422).json({
-			status: 'error',
-			message: 'Invalid input please try again.',
-		});
-	}
+const deleteTagFromResource = catchErrors(async (req, res) => {
 	const { tagId, rId } = req.body;
-	try {
-		await db.query(
-			`DELETE from tagconnections WHERE tag_id = $1 
-			AND r_id = $2`,
-			[tagId, rId],
-		);
-	} catch (e) {
-		errorLogger.error('Failed to delete tag from resource: ' + e);
-		return res.status(500).json({
-			status: 'error',
-			message: 'Failed to delete tag from resource',
-		});
-	}
+	await db.query(
+		`DELETE from tagconnections WHERE tag_id = $1 
+		AND r_id = $2`,
+		[tagId, rId],
+	);
 	res.json({ success: true });
-};
+}, 'Failed to delete tag from resource');
 
-const addTagToResource = async (req, res) => {
-	const errors = validationResult(req);
-	if (!errors.isEmpty()) {
-		return res.status(422).json({
-			status: 'error',
-			message: 'Invalid input please try again.',
-		});
-	}
+const addTagToResource = catchErrors(async (req, res) => {
 	const { tag, rId } = req.body;
 
 	const client = await db.connect();
-	let createdTag;
 	try {
 		await client.query('BEGIN');
 
-		let created = await client.query(
+		await client.query(
 			'INSERT INTO tagconnections (tag_id, r_id) ' +
 				'VALUES ($1, $2) RETURNING tag_id, r_id',
 			[tag.tag_id, rId],
 		);
-		createdTag = created.rows[0];
 		await client.query('COMMIT');
 	} catch (e) {
 		await client.query('ROLLBACK');
@@ -222,62 +170,37 @@ const addTagToResource = async (req, res) => {
 		client.release();
 	}
 	res.json(tag);
-};
+}, 'Failed to add tag');
 
-const getResourceById = async (req, res) => {
+const getResourceById = catchErrors(async (req, res) => {
 	const resourceId = req.params.rid;
 	const senderId = req.decoded.u_id;
 
-	let resource;
-	try {
-		resource = await db.query(
-			`SELECT r.r_id, r.title, r.link, r.description, 
+	let resource = await db.query(
+		`SELECT r.r_id, r.title, r.link, r.description, 
             r.author, r.votes, r.published_date, r.commentthread, r.thumbnail, 
             u.profile_pic, u.u_id, u.username 
             FROM resources r JOIN users u ON u.u_id = r.author 
             WHERE r.r_id = $1`,
-			[resourceId],
-		);
-		resource = {
-			...resource.rows[0],
-			owner: resource.rows[0].u_id === senderId,
-		};
-	} catch (e) {
-		errorLogger.error('Failed to get resource: ' + e);
-		return res.status(500).json({
-			status: 'error',
-			message: 'Failed to get resource',
-		});
-	}
+		[resourceId],
+	);
+	resource = {
+		...resource.rows[0],
+		owner: resource.rows[0].u_id === senderId,
+	};
 
-	let tags;
-	try {
-		tags = await db.query(
-			'SELECT t.title, t.tag_id, t.color FROM ' +
-				'tags t JOIN tagconnections c ' +
-				'ON t.tag_id = c.tag_id WHERE c.r_id = $1',
-			[resourceId],
-		);
-		tags = tags.rows;
-		resource = { ...resource, tags: tags };
-	} catch (e) {
-		errorLogger.error('Failed to get tags for resource: ' + e);
-		return res.status(500).json({
-			status: 'error',
-			message: 'Failed to get tags for resource',
-		});
-	}
+	let tags = await db.query(
+		'SELECT t.title, t.tag_id, t.color FROM ' +
+			'tags t JOIN tagconnections c ' +
+			'ON t.tag_id = c.tag_id WHERE c.r_id = $1',
+		[resourceId],
+	);
+	tags = tags.rows;
+	resource = { ...resource, tags: tags };
 	res.json(resource);
-};
+}, 'Failed to get tags for resource');
 
-const createResource = async (req, res) => {
-	const errors = validationResult(req);
-	if (!errors.isEmpty()) {
-		return res.status(422).json({
-			status: 'error',
-			message: 'Invalid input please try again.',
-		});
-	}
+const createResource = catchErrors(async (req, res) => {
 	const client = await db.connect();
 	const { title, description, link, type } = req.body;
 	const userId = req.decoded.u_id;
@@ -339,52 +262,31 @@ const createResource = async (req, res) => {
 			return res.status(500).json({
 				success: false,
 				status: 'error',
-				message: 'Failed to add Resource to DB.',
+				message: 'Failed to create resource.',
 			});
 		}
 	} finally {
 		client.release();
 	}
 	res.status(201).json(createdResource);
-};
+}, 'Failed to create resource');
 
-const deleteResource = async (req, res) => {
-	const errors = validationResult(req);
-	if (!errors.isEmpty()) {
-		return res.status(422).json({
-			status: 'error',
-			message: 'Invalid input please try again.',
-		});
-	}
+const deleteResource = catchErrors(async (req, res) => {
 	const senderId = req.decoded.u_id;
 	const { resourceId, userId } = req.body;
 	let toDelete;
-	try {
-		toDelete = await db.query(
-			'SELECT r.author, r.r_id, r.commentthread FROM resources r WHERE r.r_id = $1',
-			[resourceId],
-		);
-		console.log(toDelete.rows[0]);
-		if (!toDelete.rows.length) {
-			return res.status(404).json({
-				status: 'error',
-				message: 'Failed to find resource with provided Id',
-			});
-		} else if (
-			toDelete.rows[0].author !== senderId ||
-			userId !== senderId
-		) {
-			errorLogger.error('Failed to delete resource');
-			return res.status(403).json({ status: 'Unauthorized' });
-		}
-		toDelete = toDelete.rows[0];
-	} catch (e) {
-		errorLogger.error('Failed to get resource to be deleted: ' + e);
-		return res.status(500).json({
-			status: 'error',
-			message: 'Failed to get resource to be deleted',
-		});
+
+	toDelete = await db.query(
+		'SELECT r.author, r.r_id, r.commentthread FROM resources r WHERE r.r_id = $1',
+		[resourceId],
+	);
+	if (!toDelete.rows.length) {
+		throw new CustomError('Failed to find resource with provided id', 404);
+	} else if (toDelete.rows[0].author !== senderId || userId !== senderId) {
+		throw new CustomError('Unauthorized resource deletion', 401);
 	}
+	toDelete = toDelete.rows[0];
+
 	const client = await db.connect();
 
 	try {
@@ -415,74 +317,38 @@ const deleteResource = async (req, res) => {
 		client.release();
 	}
 	res.json({ success: true });
-};
+}, 'Failed to delete resource');
 
-const searchTags = async (req, res) => {
+const searchTags = catchErrors(async (req, res) => {
 	const query = req.query.q;
 	let limit = req.query.limit;
 	let tags;
-	try {
-		tags = await db.query(
-			'SELECT * FROM tags WHERE title LIKE $1 ORDER BY title ASC LIMIT $2',
-			[query + '%', limit],
-		);
-		tags = tags.rows;
-	} catch (e) {
-		errorLogger.error('Failed to find tags: ' + e);
-		return res.status(500).json({
-			status: 'error',
-			message: 'Failed to find tags',
-		});
-	}
-	res.json(tags);
-};
+	tags = await db.query(
+		'SELECT * FROM tags WHERE title LIKE $1 ORDER BY title ASC LIMIT $2',
+		[query + '%', limit],
+	);
+	tags = tags.rows;
 
-const updateResource = async (req, res) => {
-	const errors = validationResult(req);
-	if (!errors.isEmpty()) {
-		return res.status(422).json({
-			status: 'error',
-			message: 'Invalid input please try again.',
-		});
-	}
+	res.json(tags);
+}, 'Failed to find tags');
+
+const updateResource = catchErrors(async (req, res) => {
 	let { resource } = req.body;
 
-	let updatedResource;
-	try {
-		updatedResource = await db.query(
-			`
-        UPDATE resources SET 
-        description = $1, 
-        link = $2, 
-        title = $3,
-        edited = NOW() 
-        WHERE r_id = $4`,
-			[
-				resource.description,
-				resource.link,
-				resource.title,
-				resource.r_id,
-			],
-		);
-		updatedResource = updatedResource.rows;
-	} catch (e) {
-		errorLogger.error('Failed to update resource: ' + e);
-		return res.status(500).json({
-			status: 'error',
-			message: 'Failed to update resource',
-		});
-	}
+	await db.query(
+		`
+	UPDATE resources SET 
+	description = $1, 
+	link = $2, 
+	title = $3,
+	edited = NOW() 
+	WHERE r_id = $4`,
+		[resource.description, resource.link, resource.title, resource.r_id],
+	);
 	res.json({ success: true });
-};
+}, 'Failed to update resource');
 
-const voteResource = async (req, res) => {
-	const errors = validationResult(req);
-	if (!errors.isEmpty()) {
-		return res.status(422).json({
-			status: 'error',
-			message: 'Invalid input please try again.',
-		});
-	}
+const voteResource = catchErrors(async (req, res) => {
 	let { vote, resourceId } = req.body;
 	const userId = req.decoded.u_id;
 	let voteTarget;
@@ -493,11 +359,7 @@ const voteResource = async (req, res) => {
 		);
 		voteTarget = voteTarget.rows[0];
 	} catch (e) {
-		errorLogger.error('Failed to find target resource for voting: ' + e);
-		return res.status(500).json({
-			status: 'error',
-			message: 'Failed to find target resource for voting',
-		});
+		throw new CustomError('Failed to find vote target', 404);
 	}
 	const client = await db.connect();
 
@@ -566,7 +428,7 @@ const voteResource = async (req, res) => {
 		client.release();
 	}
 	res.json({ success: true });
-};
+}, 'Failed to vote resource');
 
 module.exports = {
 	getResources,

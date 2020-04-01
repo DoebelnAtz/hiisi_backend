@@ -6,7 +6,6 @@ const db = require('../postgres/queries');
 export const getCommentThreadById = catchErrors(async (req, res) => {
 	const { tid } = req.params;
 
-
 	// recursive comment query, adjust depth < x to set max depth
 
 	let commentThread = await db.query(
@@ -61,14 +60,16 @@ export const createComment = catchErrors(async (req, res) => {
 		);
 		thread = thread.rows[0];
 		createdComment = await client.query(
-			'INSERT INTO comments(commentcontent, author, parentthread, childthread) ' +
-				'VALUES($1, $2, $3, $4) ' +
-				'RETURNING c_id, commentcontent, author, parentthread, childthread, comment_date',
+			`INSERT INTO comments(commentcontent, author, parentthread, childthread)
+				VALUES($1, $2, $3, $4)
+				RETURNING c_id, commentcontent,
+			author as u_id, parentthread, childthread, comment_date`,
 			[content, authorId, threadId, thread.t_id],
 		);
 		await client.query('COMMIT');
 	} catch (e) {
-		await client.query('ROLLBACK')
+		await client.query('ROLLBACK');
+		throw new Error('Failed to create comment');
 	} finally {
 		client.release();
 	}
@@ -104,7 +105,8 @@ export const deleteComment = catchErrors(async (req, res) => {
 	const client = await db.connect();
 	try {
 		await client.query('BEGIN');
-		await client.query(`
+		await client.query(
+			`
 			UPDATE comments SET author = null, commentcontent = 'deleted' WHERE c_id = $1 
 		`,
 			[commentId],
