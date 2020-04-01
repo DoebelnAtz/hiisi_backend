@@ -1,10 +1,10 @@
 const { createLogger, transports, format } = require('winston');
 
-const accessLogger = createLogger({
+export const accessLogger = createLogger({
 	format: format.combine(
 		format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss:ms' }),
 		format.printf(
-			(info) => `${info.timestamp} ${info.level}: ${info.message}`,
+			(info: any) => `${info.timestamp} ${info.level}: ${info.message}`,
 		),
 	),
 	transports: [
@@ -18,11 +18,11 @@ const accessLogger = createLogger({
 	],
 });
 
-const errorLogger = createLogger({
+export const errorLogger = createLogger({
 	format: format.combine(
 		format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss:ms' }),
 		format.printf(
-			(info) => `${info.timestamp} ${info.level}: ${info.message}`,
+			(info: any) => `${info.timestamp} ${info.level}: ${info.message}`,
 		),
 	),
 	transports: [
@@ -36,4 +36,3 @@ const errorLogger = createLogger({
 	],
 });
 
-module.exports = { accessLogger: accessLogger, errorLogger: errorLogger };

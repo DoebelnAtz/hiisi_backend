@@ -1,24 +1,12 @@
+import { NextFunction } from 'express';
+import SocketIO from 'socket.io';
+import { handleError } from './middleware/handleError';
+
 const express = require('express');
-const bodyParser = require('body-parser');
 const cors = require('cors');
 let middleware = require('./middleware/middleware');
 const app = express();
 require('dotenv').config();
-
-app.listen(process.env.PORT || 5000);
-const io = require('socket.io')(process.env.SOCKET_PORT || 5010, {
-	handlePreflightRequest: function(req, res) {
-		var headers = {
-			// socket cors headers
-			'Access-Control-Allow-Headers': 'Content-Type, Authorization, Room',
-			'Access-Control-Allow-Origin': req.headers.origin,
-			'Access-Control-Allow-Credentials': true,
-		};
-		res.writeHead(200, headers);
-		res.end();
-	},
-});
-io.origins('*:*'); // allow all request origins for sockets
 
 const schedule = require('node-schedule');
 const authRoutes = require('./routes/auth-routes');
@@ -32,14 +20,29 @@ const resourceRoutes = require('./routes/resource-routes');
 const chatController = require('./controllers/chat-controllers');
 const searchRoutes = require('./routes/search-routes');
 
+app.listen(process.env.PORT || 5000);
+const io = require('socket.io')(process.env.SOCKET_PORT || 5010, {
+	handlePreflightRequest: function(req: any, res: any) {
+		var headers = {
+			// socket cors headers
+			'Access-Control-Allow-Headers': 'Content-Type, Authorization, Room',
+			'Access-Control-Allow-Origin': req.headers.origin,
+			'Access-Control-Allow-Credentials': true,
+		};
+		res.writeHead(200, headers);
+		return res.end();
+	},
+});
+io.origins('*:*'); // allow all request origins for sockets
+
 schedule.scheduleJob('*/30 * * * * ', userJobs.update); // execute job every X minutes, cron-like syntax
 
 app.use(cors());
-app.use(bodyParser.json());
+app.use(express.json());
 app.use('/api/auth', authRoutes); // auth routes before check token, because login requests do not supply a Token.
 app.use('/api', middleware.checkToken);
 app.use('/', middleware.logRequests); // log every incoming access request except auth routes, we don't want to log incoming passwords,
-io.use((socket, next) => middleware.checkSocketToken(socket, next)); // make sure socket requests token is correct;
+io.use((socket: SocketIO.Socket, next: NextFunction) => middleware.checkSocketToken(socket, next)); // make sure socket requests token is correct;
 app.use('/api/users', userRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/resources', resourceRoutes);
@@ -47,8 +50,9 @@ app.use('/api/projects', projectRotes);
 app.use('/api/messages', messageRoutes);
 app.use('/api/blogs', blogRoutes);
 app.use('/api/search', searchRoutes);
+app.use(handleError);
 
-io.on('connection', (socket) => {
+io.on('connection', (socket: any) => {
 	console.log('connected!');
 	socket.join(socket.request.headers.room, () => {
 		// when connecting to socket, join the appropriate room
@@ -60,8 +64,7 @@ io.on('connection', (socket) => {
 	});
 	console.log(socket.body.decoded);
 
-	socket.on('send-message', (message) => {
-		console.log(message);
+	socket.on('send-message', (message: any) => {
 		chatController.saveMessageToDB(socket, message, io);
 	});
 

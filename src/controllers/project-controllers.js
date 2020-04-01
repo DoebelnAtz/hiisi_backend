@@ -429,7 +429,7 @@ const updateProject = async (req, res) => {
 		});
 	}
 
-	const { projectId, title, description, link, private } = req.body;
+	const { projectId, title, description, link, privateProject } = req.body;
 
 	const client = await db.connect();
 
@@ -437,7 +437,7 @@ const updateProject = async (req, res) => {
 		await client.query('BEGIN');
 		await client.query(
 			`UPDATE projects SET title = $1, description = $2, link = $3, private = $4 WHERE project_id = $5`,
-			[title, description, link, private, projectId],
+			[title, description, link, privateProject, projectId],
 		);
 		await client.query('COMMIT');
 	} catch (e) {
