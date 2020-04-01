@@ -38,29 +38,29 @@ router.post(
 );
 
 router.post(
-    '/add_user',
-    [
-        check('projectId')
-            .not()
-            .isEmpty()
-            .isNumeric(),
-        check('userId')
-            .not()
-            .isEmpty()
-            .isNumeric(),
-    ],
-    projectControllers.addProjectCollaborator
+	'/add_user',
+	[
+		check('projectId')
+			.not()
+			.isEmpty()
+			.isNumeric(),
+		check('userId')
+			.not()
+			.isEmpty()
+			.isNumeric(),
+	],
+	projectControllers.addProjectCollaborator,
 );
 
 router.delete(
 	'/delete_project',
-    [
-        check('projectId')
-            .not()
-            .isEmpty()
-            .isNumeric(),
-    ],
-	projectControllers.deleteProject
+	[
+		check('projectId')
+			.not()
+			.isEmpty()
+			.isNumeric(),
+	],
+	projectControllers.deleteProject,
 );
 
 router.get('/boards/tasks/:tid', projectControllers.getTaskById);
@@ -84,8 +84,8 @@ router.post(
 	projectControllers.addCollaboratorToTask,
 );
 
-
-router.put('/boards/update_task',
+router.put(
+	'/boards/update_task',
 	[
 		check('title')
 			.not()
@@ -95,7 +95,8 @@ router.put('/boards/update_task',
 			.isEmpty()
 			.isNumeric(),
 	],
-	projectControllers.updateTask);
+	projectControllers.updateTask,
+);
 
 router.put(
 	'/boards/update_task_position',
@@ -107,25 +108,30 @@ router.put(
 		check('task_id')
 			.not()
 			.isEmpty()
-			.isNumeric(), ],
+			.isNumeric(),
+	],
 	projectControllers.updateTaskPosition,
 );
 
 router.put(
-    '/update_project',
-    [
-        check('projectId')
-            .not()
-            .isEmpty()
-            .isNumeric(),
-        check('title')
-            .not()
-            .isEmpty(),
-        check('description')
-            .not()
-            .isEmpty(),
-    ],
-    projectControllers.updateProject,
+	'/update_project',
+	[
+		check('projectId')
+			.not()
+			.isEmpty()
+			.isNumeric(),
+		check('title')
+			.not()
+			.isEmpty(),
+		check('description')
+			.not()
+			.isEmpty(),
+		check('link')
+			.not()
+			.isEmpty(),
+		check('privateProject').isBoolean(),
+	],
+	projectControllers.updateProject,
 );
 
 router.put(
@@ -144,14 +150,13 @@ router.put(
 
 router.delete(
 	'/boards/tasks/delete_task',
-    [
-        check('taskId')
-            .not()
-            .isEmpty()
-            .isNumeric(),
-    ],
-	projectControllers.deleteTask
+	[
+		check('taskId')
+			.not()
+			.isEmpty()
+			.isNumeric(),
+	],
+	projectControllers.deleteTask,
 );
-
 
 module.exports = router;
