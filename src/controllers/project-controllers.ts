@@ -350,7 +350,7 @@ export const voteProject = catchErrors(async (req, res) => {
 	const userId = req.decoded.u_id;
 	let voteTarget = await db.query(
 		`SELECT u_id, vote, project_id FROM projectvotes WHERE project_id = $1`,
-		[projectId, userId],
+		[projectId],
 	);
 	if (voteTarget.rows.length !== 1) {
 		throw new CustomError('Failed to find vote target', 404);
