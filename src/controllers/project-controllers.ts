@@ -349,8 +349,8 @@ export const voteProject = catchErrors(async (req, res) => {
 	let { vote, projectId } = req.body;
 	const userId = req.decoded.u_id;
 	let voteTarget = await db.query(
-		`SELECT u_id, vote, project_id FROM projectvotes WHERE project_id = $1`,
-		[projectId],
+		`SELECT u_id, vote, project_id FROM projectvotes WHERE project_id = $1 AND u_id = $2`,
+		[projectId, userId],
 	);
 	voteTarget = voteTarget.rows[0];
 

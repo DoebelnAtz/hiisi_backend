@@ -352,10 +352,11 @@ export const voteResource = catchErrors(async (req, res) => {
 	let { vote, resourceId } = req.body;
 	const userId = req.decoded.u_id;
 	let voteTarget = await db.query(
-		`SELECT c.vote, c.u_id FROM resourcevotes c WHERE c.r_id = $1`,
-		[resourceId],
+		`SELECT c.vote, c.u_id FROM resourcevotes c WHERE c.r_id = $1 AND c.u_id =$2`,
+		[resourceId, userId],
 	);
 	voteTarget = voteTarget.rows[0];
+
 	const client = await db.connect();
 
 	try {
