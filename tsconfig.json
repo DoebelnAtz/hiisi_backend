@@ -23,6 +23,9 @@
       "src/types",
       "node_modules/@types"
     ],
+    "paths": {
+      "*": ["./*"]
+    },
     "types": ["node"],
     "allowSyntheticDefaultImports": true,
     "esModuleInterop": true,
@@ -31,5 +34,5 @@
     "forceConsistentCasingInFileNames": true
   },
   "exclude": ["node_modules"],
-  "include": ["./src/**/*"]
+  "include": ["./src/**/*.ts"]
 }
