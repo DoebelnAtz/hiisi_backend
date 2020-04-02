@@ -152,9 +152,6 @@ export const voteBlog = catchErrors(async (req, res) => {
 			WHERE l.b_id = $1`,
 		[blogId],
 	);
-	if (voteTarget.rows.length !== 1) {
-		throw new CustomError('Failed to find vote target', 404);
-	}
 
 	voteTarget = voteTarget.rows[0];
 
