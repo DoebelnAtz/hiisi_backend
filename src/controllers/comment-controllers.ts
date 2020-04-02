@@ -1,6 +1,6 @@
 import { catchErrors } from '../errors/catchErrors';
 import CustomError from '../errors/customError';
-const db = require('../postgres/queries');
+import db from '../postgres/queries';
 //const dbNotifications = require('../db-utils/db-notifications');
 
 export const getCommentThreadById = catchErrors(async (req, res) => {

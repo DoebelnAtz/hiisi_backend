@@ -1,7 +1,7 @@
 import { RequestHandler } from 'express';
 import { catchErrors } from '../errors/catchErrors';
 
-const db = require('../postgres/queries');
+import db from '../postgres/queries';
 
 const searchAll: RequestHandler = catchErrors(async (req, res) => {
 	const q = req.query.q;
@@ -48,7 +48,10 @@ const searchAll: RequestHandler = catchErrors(async (req, res) => {
 		result = [
 			...result,
 			...matched.rows.filter(
-				(match: { title: any; }) => !result.find((res: { title: any; }) => res.title === match.title),
+				(match: { title: any }) =>
+					!result.find(
+						(res: { title: any }) => res.title === match.title,
+					),
 			),
 		];
 	}

@@ -1,7 +1,7 @@
 import { catchErrors } from '../errors/catchErrors';
 import CustomError from '../errors/customError';
 
-const db = require('../postgres/queries');
+import db from '../postgres/queries';
 
 export const getMe = catchErrors(async (req, res) => {
 	// gets user based on token

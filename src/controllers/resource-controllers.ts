@@ -2,7 +2,7 @@ import { catchErrors } from '../errors/catchErrors';
 import CustomError from '../errors/customError';
 import { errorLogger } from '../logger';
 
-const db = require('../postgres/queries');
+import db from '../postgres/queries';
 const urlMetadata = require('url-metadata');
 var URL = require('url').URL;
 

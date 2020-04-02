@@ -1,4 +1,4 @@
-const db = require('../postgres/queries');
+import db from '../postgres/queries';
 const { errorLogger } = require('../logger');
 
 // TODO: add implicit types

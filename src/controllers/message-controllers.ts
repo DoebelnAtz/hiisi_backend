@@ -1,7 +1,7 @@
 import { catchErrors } from '../errors/catchErrors';
 import CustomError from '../errors/customError';
 
-const db = require('../postgres/queries');
+import db from '../postgres/queries';
 
 export const getMessagesByThreadId = catchErrors(async (req, res) => {
 	const threadId = req.params.tid;

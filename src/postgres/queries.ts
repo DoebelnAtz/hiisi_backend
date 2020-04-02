@@ -1,5 +1,4 @@
 const pg = require('pg');
-const logger = require('../logger');
 
 const pool = new pg.Pool({
 	user: 'admin',
@@ -32,8 +31,8 @@ client.connect(function(err: Error) {
 	});
 });
 
-module.exports = {
-	query: (text: string, params: any[]) => {
+export default {
+	query: (text: string, params?: any[]) => {
 		return pool.query(text, params);
 	},
 	connect: () => pool.connect(),

@@ -1,5 +1,5 @@
 const api = require('./api');
-const db = require('../postgres/queries');
+import db from '../postgres/queries';
 import { accessLogger, errorLogger } from '../logger';
 const utils = require('../utils/utils');
 

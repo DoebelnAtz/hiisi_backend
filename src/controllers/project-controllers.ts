@@ -3,7 +3,7 @@ import CustomError from '../errors/customError';
 
 const { validationResult } = require('express-validator');
 const { errorLogger } = require('../logger');
-const db = require('../postgres/queries');
+import db from '../postgres/queries';
 
 export const addTaskToBoard = catchErrors(async (req, res) => {
 	const userId = req.decoded.u_id;

@@ -1,8 +1,9 @@
 import { catchErrors } from '../errors/catchErrors';
 import CustomError from '../errors/customError';
+import { transaction } from '../errors/transaction';
 
 const { errorLogger } = require('../logger');
-const db = require('../postgres/queries');
+import db from '../postgres/queries';
 
 export const getBlogs = catchErrors(async (req, res) => {
 	const senderId = req.decoded.u_id; // get sender id from decoded token
@@ -243,26 +244,23 @@ export const deleteBlog = catchErrors(async (req, res) => {
 		throw new CustomError('Failed to find post with provided id', 404);
 	}
 	blogToDelete = blogToDelete.rows[0];
-
 	const client = await db.connect();
 
-	try {
-		await client.query('BEGIN');
-
-		await client.query(`DELETE FROM blogvotes WHERE b_id = $1`, [blogId]);
-
-		await client.query(`DELETE FROM blogs WHERE b_id = $1`, [blogId]);
-		await client.query(
-			`
+	await transaction(
+		async () => {
+			await client.query(`DELETE FROM blogvotes WHERE b_id = $1`, [
+				blogId,
+			]);
+			await client.query(`DELETE FROM blogs WHERE b_id = $1`, [blogId]);
+			await client.query(
+				`
 			DELETE FROM commentthreads WHERE t_id = $1`,
-			[blogToDelete.commentthread],
-		);
-		await client.query('COMMIT');
-	} catch (e) {
-		await client.query('ROLLBACK');
-		throw new Error('Failed to delete post');
-	} finally {
-		client.release();
-	}
+				[blogToDelete.commentthread],
+			);
+		},
+		client,
+		'Failed to delete post',
+	);
+
 	res.json({ success: true });
 }, 'Failed to delete post');

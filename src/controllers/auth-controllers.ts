@@ -4,7 +4,7 @@ import { JsonWebTokenError } from 'jsonwebtoken';
 
 const api = require('../scheduled-jobs/api');
 const bcrypt = require('bcryptjs');
-const db = require('../postgres/queries');
+import db from '../postgres/queries';
 const { errorLogger } = require('../logger');
 let jwt = require('jsonwebtoken');
 let config = require('../config');
@@ -13,7 +13,7 @@ const utils = require('../utils/utils');
 
 const signUp = catchErrors(async (req, res) => {
 	const { username, password } = req.body;
-	let intraId = users.find((user: {login: string, id: number}) => {
+	let intraId = users.find((user: { login: string; id: number }) => {
 		return user.login === username;
 	}).id;
 
@@ -25,10 +25,7 @@ const signUp = catchErrors(async (req, res) => {
 	existingUser = existingUser.rows[0]; // can't do db.query().rows[0] directly
 
 	if (existingUser) {
-		throw new CustomError(
-			'User already exists',
-			401
-		)
+		throw new CustomError('User already exists', 401);
 	}
 
 	let hashedPassword;
@@ -63,22 +60,22 @@ const signUp = catchErrors(async (req, res) => {
 		$9, $10, $11, $12
 		) RETURNING username
 	`,
-		[
-			username,
-			hashedPassword,
-			intraId,
-			userinfo.image_url,
-			userinfo.cursus_users[0].level,
-			userinfo.cursus_users[0].grade,
-			userinfo['staff?']
-				? 'Bocal'
-				: userinfo.pool_month + ' ' + userinfo.pool_year,
-			userinfo.wallet,
-			userinfo.location,
-			userinfo.correction_point,
-			utils.countAchievementPoints(userinfo.achievements),
-			!!userinfo.location,
-		],
+			[
+				username,
+				hashedPassword,
+				intraId,
+				userinfo.image_url,
+				userinfo.cursus_users[0].level,
+				userinfo.cursus_users[0].grade,
+				userinfo['staff?']
+					? 'Bocal'
+					: userinfo.pool_month + ' ' + userinfo.pool_year,
+				userinfo.wallet,
+				userinfo.location,
+				userinfo.correction_point,
+				utils.countAchievementPoints(userinfo.achievements),
+				!!userinfo.location,
+			],
 		);
 		await client.query('COMMIT');
 	} catch (e) {
@@ -87,7 +84,7 @@ const signUp = catchErrors(async (req, res) => {
 		return res.status(500).json({
 			status: 'Error',
 			message: 'Failed to create user',
-	});
+		});
 	} finally {
 		client.release();
 	}
@@ -174,7 +171,7 @@ const login = catchErrors(async (req, res, next) => {
 		}
 		await client.query('COMMIT');
 	} catch (e) {
-		await client.query('ROLLBACK')
+		await client.query('ROLLBACK');
 	} finally {
 		client.release();
 	}
@@ -202,17 +199,13 @@ const changePassword = catchErrors(async (req, res) => {
 	);
 	userToUpdate = userToUpdate.rows[0];
 
-
 	let isValidPass = await bcrypt.compare(
 		currentPassword,
 		userToUpdate.password,
 	);
 
 	if (!isValidPass) {
-		throw new CustomError(
-			'Invalid credentials',
-			401
-		)
+		throw new CustomError('Invalid credentials', 401);
 	}
 
 	let hashedPassword;
@@ -245,50 +238,48 @@ const changePassword = catchErrors(async (req, res) => {
 const refreshToken = catchErrors(async (req, res) => {
 	let refreshToken = req.headers['x-refresh-token'] as string;
 	if (!refreshToken) {
-		throw new CustomError(
-			'Failed to refresh token',
-			401
-		)
+		throw new CustomError('Failed to refresh token', 401);
 	}
 	if (refreshToken.startsWith('Bearer ')) {
 		refreshToken = refreshToken.slice(7, refreshToken.length);
 	}
 
 	if (refreshToken) {
-		jwt.verify(refreshToken, config.secret, (err: JsonWebTokenError, decoded:any) => {
-			if (err) {
-				throw new CustomError(
-			'Failed to refresh token',
-			401
-		)
-			} else {
-				let token = jwt.sign(
-					{ username: decoded.username, u_id: decoded.u_id },
-					config.secret,
-					{
-						expiresIn: '24h', // expires in 24 hours
-					},
-				);
+		jwt.verify(
+			refreshToken,
+			config.secret,
+			(err: JsonWebTokenError, decoded: any) => {
+				if (err) {
+					throw new CustomError('Failed to refresh token', 401);
+				} else {
+					let token = jwt.sign(
+						{ username: decoded.username, u_id: decoded.u_id },
+						config.secret,
+						{
+							expiresIn: '24h', // expires in 24 hours
+						},
+					);
 
-				let refreshToken = jwt.sign(
-					{ username: decoded.username, u_id: decoded.u_id },
-					config.secret,
-					{
-						expiresIn: '4d', // expires in 4 days
-					},
-				);
-				return res.json({
-					token,
-					refreshToken,
-					user: { username: decoded.username, u_id: decoded.u_id },
-				});
-			}
-		});
+					let refreshToken = jwt.sign(
+						{ username: decoded.username, u_id: decoded.u_id },
+						config.secret,
+						{
+							expiresIn: '4d', // expires in 4 days
+						},
+					);
+					return res.json({
+						token,
+						refreshToken,
+						user: {
+							username: decoded.username,
+							u_id: decoded.u_id,
+						},
+					});
+				}
+			},
+		);
 	} else {
-		throw new CustomError(
-			'Failed to refresh token',
-			401
-		)
+		throw new CustomError('Failed to refresh token', 401);
 	}
 }, 'Failed to refresh access token');
 
