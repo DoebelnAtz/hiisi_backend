@@ -17,6 +17,7 @@
     "noImplicitReturns": false,
     "noFallthroughCasesInSwitch": true,
     "moduleResolution": "node",
+    "outDir": "./build",
     "baseUrl": "src",
     "typeRoots": [
       "src/types",
