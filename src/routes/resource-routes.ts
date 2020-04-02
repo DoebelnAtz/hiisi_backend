@@ -1,16 +1,16 @@
-const express = require('express');
-const router = express.Router();
-const { check } = require('express-validator');
+import express from 'express';
+import { check } from 'express-validator';
 
+const resourceRouter = express.Router();
 const resourceController = require('../controllers/resource-controllers');
 
-router.get('/', resourceController.getResources);
+resourceRouter.get('/', resourceController.getResources);
 
-router.get('/tags', resourceController.searchTags);
+resourceRouter.get('/tags', resourceController.searchTags);
 
-router.get('/:rid', resourceController.getResourceById);
+resourceRouter.get('/:rid', resourceController.getResourceById);
 
-router.post(
+resourceRouter.post(
 	'/add_resource',
 	[
 		check('title')
@@ -29,7 +29,7 @@ router.post(
 	resourceController.createResource,
 );
 
-router.post(
+resourceRouter.post(
 	'/save_resource',
 	[
 		check('rId')
@@ -40,7 +40,7 @@ router.post(
 	resourceController.saveResource,
 );
 
-router.delete(
+resourceRouter.delete(
 	'/save_resource',
 	[
 		check('rId')
@@ -51,7 +51,7 @@ router.delete(
 	resourceController.unSaveResource,
 );
 
-router.post(
+resourceRouter.post(
 	'/add_tags',
 	[
 		check('tag.tag_id')
@@ -66,7 +66,7 @@ router.post(
 	resourceController.addTagToResource,
 );
 
-router.post(
+resourceRouter.post(
 	'/vote_resource',
 	[
 		check('vote')
@@ -81,7 +81,7 @@ router.post(
 	resourceController.voteResource,
 );
 
-router.delete(
+resourceRouter.delete(
 	'/delete_resource',
 	[
 		check('userId')
@@ -96,7 +96,7 @@ router.delete(
 	resourceController.deleteResource,
 );
 
-router.delete(
+resourceRouter.delete(
 	'/delete_tag',
 	[
 		check('tagId')
@@ -111,7 +111,7 @@ router.delete(
 	resourceController.deleteTagFromResource,
 );
 
-router.put(
+resourceRouter.put(
 	'/update_resource',
 	[
 		check('resource.description')
@@ -131,4 +131,4 @@ router.put(
 	resourceController.updateResource,
 );
 
-module.exports = router;
+module.exports = resourceRouter;

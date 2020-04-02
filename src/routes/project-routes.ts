@@ -1,9 +1,10 @@
-const express = require('express');
-const projectControllers = require('../controllers/project-controllers');
-const { check } = require('express-validator');
-const router = express.Router();
+import express from 'express';
+import { check } from 'express-validator';
 
-router.post(
+const projectControllers = require('../controllers/project-controllers');
+const projectRouter = express.Router();
+
+projectRouter.post(
 	'/boards/add_task',
 	[
 		check('taskTitle')
@@ -16,13 +17,13 @@ router.post(
 	projectControllers.addTaskToBoard,
 );
 
-router.get('/', projectControllers.getProjects);
+projectRouter.get('/', projectControllers.getProjects);
 
-router.get('/boards/:bid', projectControllers.getBoardById);
+projectRouter.get('/boards/:bid', projectControllers.getBoardById);
 
-router.post('/create_project', projectControllers.createProject);
+projectRouter.post('/create_project', projectControllers.createProject);
 
-router.post(
+projectRouter.post(
 	'/vote_project',
 	[
 		check('vote')
@@ -37,7 +38,7 @@ router.post(
 	projectControllers.voteProject,
 );
 
-router.post(
+projectRouter.post(
 	'/add_user',
 	[
 		check('projectId')
@@ -52,7 +53,7 @@ router.post(
 	projectControllers.addProjectCollaborator,
 );
 
-router.delete(
+projectRouter.delete(
 	'/delete_project',
 	[
 		check('projectId')
@@ -63,13 +64,13 @@ router.delete(
 	projectControllers.deleteProject,
 );
 
-router.get('/boards/tasks/:tid', projectControllers.getTaskById);
+projectRouter.get('/boards/tasks/:tid', projectControllers.getTaskById);
 
-router.get('/collaborators', projectControllers.getProjectCollaborators);
+projectRouter.get('/collaborators', projectControllers.getProjectCollaborators);
 
-router.get('/:pid', projectControllers.getProjectById);
+projectRouter.get('/:pid', projectControllers.getProjectById);
 
-router.post(
+projectRouter.post(
 	'/boards/tasks/add_user',
 	[
 		check('userId')
@@ -84,7 +85,7 @@ router.post(
 	projectControllers.addCollaboratorToTask,
 );
 
-router.put(
+projectRouter.put(
 	'/boards/update_task',
 	[
 		check('title')
@@ -98,7 +99,7 @@ router.put(
 	projectControllers.updateTask,
 );
 
-router.put(
+projectRouter.put(
 	'/boards/update_task_position',
 	[
 		check('column_id')
@@ -113,7 +114,7 @@ router.put(
 	projectControllers.updateTaskPosition,
 );
 
-router.put(
+projectRouter.put(
 	'/update_project',
 	[
 		check('projectId')
@@ -134,7 +135,7 @@ router.put(
 	projectControllers.updateProject,
 );
 
-router.put(
+projectRouter.put(
 	'/boards/update_column',
 	[
 		check('title')
@@ -148,7 +149,7 @@ router.put(
 	projectControllers.updateColumn,
 );
 
-router.delete(
+projectRouter.delete(
 	'/boards/tasks/delete_task',
 	[
 		check('taskId')
@@ -159,4 +160,4 @@ router.delete(
 	projectControllers.deleteTask,
 );
 
-module.exports = router;
+module.exports = projectRouter;

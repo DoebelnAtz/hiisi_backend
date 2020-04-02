@@ -1,9 +1,9 @@
 const express = require('express');
 const { check } = require('express-validator');
-const router = express.Router();
+const authRouter = express.Router();
 const authController = require('../controllers/auth-controllers');
 
-router.post(
+authRouter.post(
 	'/signup',
 	[
 		check('username')
@@ -14,7 +14,7 @@ router.post(
 	authController.signUp,
 );
 
-router.put(
+authRouter.put(
 	'/change_password',
 	[
 		check('username')
@@ -33,7 +33,7 @@ router.put(
 	authController.changePassword,
 );
 
-router.post(
+authRouter.post(
 	'/login',
 	[
 		check('username')
@@ -46,6 +46,6 @@ router.post(
 	authController.login,
 );
 
-router.post('/refresh_token', authController.refreshToken);
+authRouter.post('/refresh_token', authController.refreshToken);
 
-module.exports = router;
+module.exports = authRouter;

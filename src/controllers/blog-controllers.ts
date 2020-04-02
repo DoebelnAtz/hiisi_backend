@@ -1,17 +1,16 @@
-const { validationResult } = require('express-validator');
+import { catchErrors } from '../errors/catchErrors';
+import CustomError from '../errors/customError';
+
 const { errorLogger } = require('../logger');
 const db = require('../postgres/queries');
 
-const getBlogs = async (req, res) => {
-	let sender;
+export const getBlogs = catchErrors(async (req, res) => {
 	const senderId = req.decoded.u_id; // get sender id from decoded token
 	let order = req.query.order || 'popular';
 	let pagination = req.query.page || 1;
 	let reverse = req.query.reverse || 'false';
 	if (order !== 'popular' && order !== 'recent' && order !== 'title') {
-		errorLogger.error(
-			`Failed to get ${posts.tableName}: invalid order parameter`,
-		);
+		errorLogger.error(`Failed to get blogs: invalid order parameter`);
 		return res.status(422).json({
 			status: 'error',
 			message: 'Failed to get blogs',
@@ -36,21 +35,6 @@ const getBlogs = async (req, res) => {
 			order1 = `title ${reverseOrder}`;
 			order2 = 'published_date DESC';
 	}
-	try {
-		sender = await db.query(
-			`SELECT b_id, vote FROM users 
-            JOIN blogvotes ON blogvotes.u_id = $1`,
-			[senderId],
-		);
-		sender = sender.rows.map((row) => row.b_id);
-	} catch (e) {
-		errorLogger.error('Failed to get blogs: ' + e);
-		return res.status(500).json({
-			status: 'error',
-			message: 'Failed to get blogs',
-		});
-	}
-
 	const perPage = 14;
 	const userId = req.decoded.u_id;
 	let blogs;
@@ -76,7 +60,7 @@ const getBlogs = async (req, res) => {
 			(pagination - 1) * perPage,
 		]);
 		blogs = blogs.rows;
-		blogs.map((blog) => (blog.owner = blog.u_id === senderId));
+		blogs.map((blog: any) => (blog.owner = blog.u_id === senderId));
 	} catch (e) {
 		errorLogger.error(`'Failed to get blogs: ${e} ${query}`);
 		return res.status(500).json({
@@ -85,34 +69,27 @@ const getBlogs = async (req, res) => {
 		});
 	}
 	res.json(blogs);
-};
+}, 'Failed to get blogs');
 
-const getBlogById = async (req, res) => {
+export const getBlogById = catchErrors(async (req, res) => {
 	const blogId = req.params.bid;
 
 	let blog;
-	try {
-		blog = await db.query(
-			`SELECT b.title, b.content, b.edited,
-			b.b_id, b.commentthread, b.published_date, 
-			u.username, u.u_id, u.profile_pic
-			FROM blogs b JOIN users u ON u.u_id = author WHERE b_id = $1`,
-			[blogId],
-		);
-		blog = blog.rows[0];
-		blog.owner = blog.u_id === req.decoded.u_id;
-	} catch (e) {
-		errorLogger.error(`Failed to get blog: ${e}`);
-		return res.status(500).json({
-			status: 'error',
-			message: 'Failed to get blog',
-		});
-	}
+
+	blog = await db.query(
+		`SELECT b.title, b.content, b.edited,
+		b.b_id, b.commentthread, b.published_date, 
+		u.username, u.u_id, u.profile_pic
+		FROM blogs b JOIN users u ON u.u_id = author WHERE b_id = $1`,
+		[blogId],
+	);
+	blog = blog.rows[0];
+	blog.owner = blog.u_id === req.decoded.u_id;
 
 	res.json(blog);
-};
+}, 'Failed to get post by id');
 
-const getBlogsByUserId = async (req, res) => {
+export const getBlogsByUserId = catchErrors(async (req, res) => {
 	const userId = req.params.uid;
 	let blogs;
 	try {
@@ -129,48 +106,12 @@ const getBlogsByUserId = async (req, res) => {
 	}
 
 	res.json(blogs);
-};
+}, 'Failed to get posts by user id');
 
-const createBlog = async (req, res) => {
-	const errors = validationResult(req);
-	if (!errors.isEmpty()) {
-		return res.status(400).json({
-			status: 'error',
-			message: 'Invalid input please try again.',
-		});
-	}
+export const createBlog = catchErrors(async (req, res) => {
+	const { title, content } = req.body;
 
-	const { title, authorId, content } = req.body;
-
-	let user;
-	try {
-		user = await db.query(
-			'SELECT username, intraid FROM users WHERE u_id = $1',
-			[authorId],
-		);
-		user = user.rows[0];
-	} catch (e) {
-		errorLogger.error(`Failed to create blog: ${e}`);
-		if (e.code === '23505') {
-			res.status(400).json({
-				success: false,
-				status: 'error',
-				message: 'Title already exists',
-			});
-		} else {
-			return res.status(500).json({
-				success: false,
-				status: 'error',
-				message: 'Failed to create post.',
-			});
-		}
-	}
-	if (!user) {
-		return res.status(404).json({
-			status: 'error',
-			message: 'Could not find user with provided id',
-		});
-	}
+	const authorId = req.decoded.u_id;
 
 	const client = await db.connect();
 
@@ -178,7 +119,8 @@ const createBlog = async (req, res) => {
 	try {
 		await client.query('BEGIN');
 		let res = await client.query(
-			'INSERT INTO commentthreads DEFAULT VALUES RETURNING t_id',
+			`INSERT INTO commentthreads
+			DEFAULT VALUES RETURNING t_id`,
 		);
 		res = res.rows[0];
 		createdBlog = await client.query(
@@ -190,53 +132,32 @@ const createBlog = async (req, res) => {
 		await client.query('COMMIT');
 	} catch (e) {
 		await client.query('ROLLBACK');
-		errorLogger.error(`Failed to create blog: ${e}`);
 		if (e.code === '23505') {
-			res.status(400).json({
-				success: false,
-				status: 'error',
-				message: 'Title already exists',
-			});
+			throw new CustomError('Title already exists', 400);
 		} else {
-			return res.status(500).json({
-				success: false,
-				status: 'error',
-				message: 'Failed to add Resource to DB.',
-			});
+			throw new Error('Failed to create post');
 		}
 	} finally {
 		client.release();
 	}
-
 	res.status(201).json(createdBlog.rows[0]);
-};
+}, 'Failed to create post');
 
-const voteBlog = async (req, res) => {
-	const errors = validationResult(req);
-	if (!errors.isEmpty()) {
-		return res.status(422).json({
-			status: 'error',
-			message: 'Invalid input please try again.',
-		});
-	}
+export const voteBlog = catchErrors(async (req, res) => {
 	let { vote, blogId } = req.body;
 	const userId = req.decoded.u_id;
-	let voteTarget;
-	try {
-		voteTarget = await db.query(
-			`SELECT l.b_id, l.vote 
+	let voteTarget = await db.query(
+		`SELECT l.b_id, l.vote 
 			FROM blogvotes l 
 			WHERE l.b_id = $1 AND l.u_id = $2`,
-			[blogId, userId],
-		);
-		voteTarget = voteTarget.rows[0];
-	} catch (e) {
-		errorLogger.error('Failed to find target blog for voting: ' + e);
-		return res.status(500).json({
-			status: 'error',
-			message: 'Failed to find target blog for voting',
-		});
+		[blogId, userId],
+	);
+	if (voteTarget.rows.length !== 1) {
+		throw new CustomError('Failed to find vote target', 404);
 	}
+
+	voteTarget = voteTarget.rows[0];
+
 	const client = await db.connect();
 
 	try {
@@ -290,70 +211,42 @@ const voteBlog = async (req, res) => {
 		await client.query('COMMIT');
 	} catch (e) {
 		await client.query('ROLLBACK');
-		errorLogger.error('Failed to vote blog: ' + e);
-		return res.status(500).json({
-			success: false,
-			status: 'error',
-			message: 'Failed to vote blog.',
-		});
+		throw new Error('Failed to vote on blog');
 	} finally {
 		client.release();
 	}
 	res.json({ success: true });
-};
+}, 'Failed to vote on post');
 
-const updateBlog = async (req, res) => {
-	const errors = validationResult(req);
-	if (!errors.isEmpty()) {
-		return res.status(400).json({
-			status: 'error',
-			message: 'Invalid input please try again.',
-		});
-	}
-
+export const updateBlog = catchErrors(async (req, res) => {
 	const { content, title, postId } = req.body;
 	const senderId = req.decoded.u_id;
-	let updatedBlog;
-	try {
-		updatedBlog = await db.query(
-			`UPDATE blogs
-	        SET
-	        title = $1,
-	        content = $2,
-	        edited = NOW()
-	        WHERE b_id = $3 AND author = $4`,
-			[title, content, postId, senderId],
-		);
-		updatedBlog = updatedBlog.rows[0];
-	} catch (e) {
-		errorLogger.error(`Failed to update blog: ${e}`);
-		return res.status(500).json({
-			status: 'error',
-			message: 'Failed to update blog',
-		});
-	}
+	let updatedBlog = await db.query(
+		`UPDATE blogs
+		SET
+		title = $1,
+		content = $2,
+		edited = NOW()
+		WHERE b_id = $3 AND author = $4`,
+		[title, content, postId, senderId],
+	);
+	updatedBlog = updatedBlog.rows[0];
 	res.json(updatedBlog);
-};
+}, 'Failed to update post');
 
-const deleteBlog = async (req, res) => {
+export const deleteBlog = catchErrors(async (req, res) => {
 	const senderId = req.decoded.u_id;
 
 	const { blogId } = req.body;
-	let blogToDelete;
-	try {
-		blogToDelete = await db.query(
-			`SELECT b_id, commentthread FROM blogs WHERE b_id = $1`,
-			[blogId],
-		);
-		blogToDelete = blogToDelete.rows[0];
-	} catch (e) {
-		errorLogger.error('Failed to find post to delete: ' + e);
-		return res.status(500).json({
-			success: false,
-			status: 'error',
-			message: 'Failed to find post to delete.',
-		});
+	let blogToDelete = await db.query(
+		`SELECT b_id, commentthread FROM blogs WHERE b_id = $1 AND author = $2`,
+		[blogId, senderId],
+	);
+	if (blogToDelete.rows.length !== 1) {
+		throw new CustomError('Failed to find post with provided id', 404);
 	}
+	blogToDelete = blogToDelete.rows[0];
+
 	const client = await db.connect();
 
 	try {
@@ -370,24 +263,9 @@ const deleteBlog = async (req, res) => {
 		await client.query('COMMIT');
 	} catch (e) {
 		await client.query('ROLLBACK');
-		errorLogger.error('Failed to add task: ' + e);
-		return res.status(500).json({
-			success: false,
-			status: 'error',
-			message: 'Failed to find post to delete.',
-		});
+		throw new Error('Failed to delete post');
 	} finally {
 		client.release();
 	}
 	res.json({ success: true });
-};
-
-module.exports = {
-	getBlogs,
-	getBlogById,
-	getBlogsByUserId,
-	updateBlog,
-	createBlog,
-	voteBlog,
-	deleteBlog,
-};
+}, 'Failed to delete post');

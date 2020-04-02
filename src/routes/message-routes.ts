@@ -1,17 +1,15 @@
-const express = require('express');
-const { check } = require('express-validator');
-const router = express.Router();
+import { check } from 'express-validator';
+import express from 'express';
+const messageRouter = express.Router();
 
 const messageController = require('../controllers/message-controllers');
-const chatController = require('../controllers/chat-controllers');
+messageRouter.get('/threads/:tid', messageController.getMessagesByThreadId);
 
-router.get('/threads/:tid', messageController.getMessagesByThreadId);
+messageRouter.get('/threads', messageController.getThreadsByUserId);
 
-router.get('/threads', messageController.getThreadsByUserId);
+messageRouter.get('/threads/:tid/users', messageController.getUsersInThread);
 
-router.get('/threads/:tid/users', messageController.getUsersInThread);
-
-router.post(
+messageRouter.post(
 	'/threads/create_thread',
 	[
 		check('threadName')
@@ -21,7 +19,7 @@ router.post(
 	messageController.createNewThread,
 );
 
-router.post(
+messageRouter.post(
 	'/threads/add_user',
 	[
 		check('targetId')
@@ -36,7 +34,7 @@ router.post(
 	messageController.addUserToThread,
 );
 
-router.delete(
+messageRouter.delete(
 	'/threads/delete_thread',
 	[
 		check('targetId')
@@ -44,7 +42,7 @@ router.delete(
 			.isEmpty()
 			.isNumeric(),
 	],
-	messageController.deleteThread
+	messageController.deleteThread,
 );
 
-module.exports = router;
+module.exports = messageRouter;

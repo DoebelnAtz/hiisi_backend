@@ -1,23 +1,24 @@
+import { check } from 'express-validator';
+
 const express = require('express');
-const { check } = require('express-validator');
 
 const blogsController = require('../controllers/blog-controllers');
 const commentController = require('../controllers/comment-controllers');
-const router = express.Router();
+const blogRouter = express.Router();
 
 // We can get posts by POST or GET, POST method can include senderId to check if sender has liked a post
 
-router.get('/', blogsController.getBlogs);
+blogRouter.get('/', blogsController.getBlogs);
 
-router.get('/:bid', blogsController.getBlogById);
+blogRouter.get('/:bid', blogsController.getBlogById);
 
-router.get('/users/:uid', blogsController.getBlogsByUserId);
+blogRouter.get('/users/:uid', blogsController.getBlogsByUserId);
 
 // Same as blogs, we can get comment threads by POST or GET to check likes,
 
-router.get('/commentthread/:tid', commentController.getCommentThreadById);
+blogRouter.get('/commentthread/:tid', commentController.getCommentThreadById);
 
-router.post(
+blogRouter.post(
 	'/create_blog',
 	[
 		check('title')
@@ -30,7 +31,7 @@ router.post(
 	blogsController.createBlog,
 );
 
-router.post(
+blogRouter.post(
 	'/vote_blog',
 	[
 		check('blogId')
@@ -45,7 +46,7 @@ router.post(
 	blogsController.voteBlog,
 );
 
-router.post(
+blogRouter.post(
 	'/create_comment',
 	[
 		check('threadId')
@@ -59,7 +60,7 @@ router.post(
 	commentController.createComment,
 );
 
-router.put(
+blogRouter.put(
 	'/update_blog',
 	[
 		check('content')
@@ -75,7 +76,7 @@ router.put(
 	blogsController.updateBlog,
 );
 
-router.delete(
+blogRouter.delete(
 	'/delete_blog',
 	[
 		check('blogId')
@@ -86,7 +87,7 @@ router.delete(
 	blogsController.deleteBlog,
 );
 
-router.delete(
+blogRouter.delete(
 	'/delete_comment',
 	[
 		check('commentId')
@@ -97,4 +98,4 @@ router.delete(
 	commentController.deleteComment,
 );
 
-module.exports = router;
+module.exports = blogRouter;
