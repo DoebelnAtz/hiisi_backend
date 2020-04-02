@@ -149,7 +149,7 @@ export const voteBlog = catchErrors(async (req, res) => {
 	let voteTarget = await db.query(
 		`SELECT l.b_id, l.vote 
 			FROM blogvotes l 
-			WHERE l.b_id = $1 AND l.u_id = $2`,
+			WHERE l.b_id = $1`,
 		[blogId, userId],
 	);
 	if (voteTarget.rows.length !== 1) {

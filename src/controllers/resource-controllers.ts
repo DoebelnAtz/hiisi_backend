@@ -351,14 +351,13 @@ export const updateResource = catchErrors(async (req, res) => {
 export const voteResource = catchErrors(async (req, res) => {
 	let { vote, resourceId } = req.body;
 	const userId = req.decoded.u_id;
-	let voteTarget;
-	try {
-		voteTarget = await db.query(
-			`SELECT c.vote, c.u_id FROM resourcevotes c WHERE c.r_id = $1 AND c.u_id =$2`,
-			[resourceId, userId],
-		);
-		voteTarget = voteTarget.rows[0];
-	} catch (e) {
+	let voteTarget = await db.query(
+		`SELECT c.vote, c.u_id FROM resourcevotes c WHERE c.r_id = $1`,
+		[resourceId, userId],
+	);
+
+	voteTarget = voteTarget.rows[0];
+	if (voteTarget.rows.length !== 1) {
 		throw new CustomError('Failed to find vote target', 404);
 	}
 	const client = await db.connect();
