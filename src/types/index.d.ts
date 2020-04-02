@@ -13,3 +13,8 @@ type Message = {
 	message: string;
 	username: string;
 };
+
+type Decoded = {
+	u_id: number;
+	username: string;
+};

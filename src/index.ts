@@ -4,7 +4,7 @@ import { handleError } from './middleware/handleError';
 
 const express = require('express');
 const cors = require('cors');
-let middleware = require('./middleware/middleware');
+let middleware = require('middleware.ts');
 const app = express();
 require('dotenv').config();
 
@@ -13,7 +13,7 @@ const authRoutes = require('./routes/auth-routes');
 const userRoutes = require('./routes/user-routes');
 const notificationRoutes = require('./routes/notification-routes');
 const blogRoutes = require('./routes/blog-routes');
-const userJobs = require('./scheduled-jobs/update-users');
+const userJobs = require('update-users.ts');
 const projectRotes = require('./routes/project-routes');
 const messageRoutes = require('./routes/message-routes');
 const resourceRoutes = require('./routes/resource-routes');
@@ -42,7 +42,9 @@ app.use(express.json());
 app.use('/api/auth', authRoutes); // auth routes before check token, because login requests do not supply a Token.
 app.use('/api', middleware.checkToken);
 app.use('/', middleware.logRequests); // log every incoming access request except auth routes, we don't want to log incoming passwords,
-io.use((socket: SocketIO.Socket, next: NextFunction) => middleware.checkSocketToken(socket, next)); // make sure socket requests token is correct;
+io.use((socket: SocketIO.Socket, next: NextFunction) =>
+	middleware.checkSocketToken(socket, next),
+); // make sure socket requests token is correct;
 app.use('/api/users', userRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/resources', resourceRoutes);

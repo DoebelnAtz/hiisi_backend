@@ -1,6 +1,6 @@
 const api = require('./api');
 const db = require('../postgres/queries');
-const { accessLogger, errorLogger } = require('../logger');
+import { accessLogger, errorLogger } from '../logger';
 const utils = require('../utils/utils');
 
 const updateUsers = async () => {

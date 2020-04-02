@@ -1,4 +1,4 @@
-const countAchievementPoints = (achievementList) => {
+const countAchievementPoints = (achievementList: { tier: string }[]) => {
 	let points = 0;
 	for (var i = 0; i < achievementList.length; i++) {
 		switch (achievementList[i].tier) {
@@ -15,14 +15,9 @@ const countAchievementPoints = (achievementList) => {
 	return points;
 };
 
-const sleep = (ms) => {
+const sleep = (ms: number) => {
 	return new Promise((resolve) => setTimeout(resolve, ms));
-};
-
-const removeDup = (arr) => {
-	return arr.filter((v, i) => arr.indexOf(v) === i);
 };
 
 exports.countAchievementPoints = countAchievementPoints;
 exports.sleep = sleep;
-exports.removeDup = removeDup;

@@ -1,4 +1,4 @@
-const { errorLogger } = require('../logger');
+import { errorLogger } from '../logger';
 
 const mongoose = require('mongoose');
 const database = `mongodb+srv://aadlercr:94502491Hive@hivemind-fyteo.mongodb.net/hivemind?retryWrites=true&w=majority
@@ -27,15 +27,15 @@ const NotificationSchema = new Schema({
 	read: Boolean,
 });
 
-const Notification = mongoose.model('Notification', NotificationSchema);
+const NotifModel = mongoose.model('Notification', NotificationSchema);
 
-const createNotification = async (notifObj) => {
+const createNotification = async (notifObj: any) => {
 	if (
 		!(notifObj.type && notifObj.message && notifObj.link && notifObj.userId)
 	)
 		throw new Error('Invalid input');
 
-	const createdNotification = new Notification({
+	const createdNotification = new NotifModel({
 		type: notifObj.type,
 		date: new Date().toISOString(),
 		u_id: notifObj.userId,
@@ -52,10 +52,10 @@ const createNotification = async (notifObj) => {
 	return createdNotification;
 };
 
-const getUserNotifications = async (userId) => {
+const getUserNotifications = async (userId: number) => {
 	let userNotifications;
 	try {
-		userNotifications = await Notification.find({ u_id: userId })
+		userNotifications = await NotifModel.find({ u_id: userId })
 			.sort({ date: -1 })
 			.limit(10);
 	} catch (e) {
@@ -64,10 +64,9 @@ const getUserNotifications = async (userId) => {
 	return userNotifications;
 };
 
-const readNotif = async (notificationId) => {
-	let notification;
+const readNotif = async (notificationId: number) => {
 	try {
-		notification = await Notification.update(
+		await NotifModel.update(
 			{ id: notificationId },
 			{ $set: { read: true } },
 			{ multi: true },
