@@ -411,10 +411,6 @@ export const voteResource = catchErrors(async (req, res) => {
 				[resourceId, userId, vote],
 			);
 		}
-		await client.query(
-			'UPDATE resources SET votes = votes + $1 WHERE r_id = $2',
-			[vote, resourceId],
-		);
 		await client.query('COMMIT');
 	} catch (e) {
 		await client.query('ROLLBACK');
