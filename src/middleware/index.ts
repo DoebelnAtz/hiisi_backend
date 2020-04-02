@@ -2,7 +2,7 @@ import { NextFunction, RequestHandler } from 'express';
 import { JsonWebTokenError } from 'jsonwebtoken';
 
 let jwt = require('jsonwebtoken');
-const config = require('../config.js');
+const config = require('../config');
 const accessLogger = require('../logger').accessLogger;
 
 let checkToken: RequestHandler = (req, res, next) => {

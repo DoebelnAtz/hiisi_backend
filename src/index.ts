@@ -4,7 +4,7 @@ import { handleError } from './middleware/handleError';
 
 const express = require('express');
 const cors = require('cors');
-let middleware = require('middleware');
+let middleware = require('./middleware');
 const app = express();
 require('dotenv').config();
 
@@ -13,7 +13,7 @@ const authRoutes = require('./routes/auth-routes');
 const userRoutes = require('./routes/user-routes');
 const notificationRoutes = require('./routes/notification-routes');
 const blogRoutes = require('./routes/blog-routes');
-const userJobs = require('update-users');
+const userJobs = require('./scheduled-jobs/update-users');
 const projectRotes = require('./routes/project-routes');
 const messageRoutes = require('./routes/message-routes');
 const resourceRoutes = require('./routes/resource-routes');
