@@ -143,6 +143,14 @@
     
     
     
+    POST: /create_project
+    
+    create a project
+    
+    required fields: title, description, link, private
+    
+    
+    
     POST: /boards/add_task
 
     adds task to board

@@ -21,7 +21,23 @@ projectRouter.get('/', projectControllers.getProjects);
 
 projectRouter.get('/boards/:bid', projectControllers.getBoardById);
 
-projectRouter.post('/create_project', projectControllers.createProject);
+projectRouter.post(
+	'/create_project',
+	[
+		check('title')
+			.not()
+			.isEmpty(),
+		check('link')
+			.not()
+			.isEmpty(),
+		check('description')
+			.not()
+			.isEmpty(),
+		check('private')
+			.not()
+			.isEmpty()
+	]
+	,projectControllers.createProject);
 
 projectRouter.post(
 	'/vote_project',
