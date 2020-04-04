@@ -18,7 +18,7 @@ const searchAll: RequestHandler = catchErrors(async (req, res) => {
 		FROM blogs b 
 		UNION ALL 
 		SELECT p.title, p.project_id AS id, 'project' AS type, '/projects' AS link 
-		FROM projects p ORDER BY title ASC
+		FROM projects p WHERE p.private = FALSE ORDER BY title ASC
 		) AS res WHERE LOWER(res.title) LIKE LOWER($1) LIMIT 10`,
 		[q + '%'],
 	);
@@ -41,7 +41,7 @@ const searchAll: RequestHandler = catchErrors(async (req, res) => {
 		FROM blogs b 
 		UNION ALL 
 		SELECT p.title, p.project_id AS id, 'project' AS type, '/projects' AS link 
-		FROM projects p ORDER BY title ASC
+		FROM projects p WHERE p.private = FALSE ORDER BY title ASC
 		) AS res WHERE LOWER(res.title) LIKE LOWER($1) LIMIT $2`,
 			['%' + q + '%', 10 - result.length],
 		);
