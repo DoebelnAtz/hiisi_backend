@@ -196,8 +196,12 @@ export const getAllByUserId = catchErrors(async (req, res) => {
 			userSubmissions = await db.query(
 				`
 			SELECT * FROM (
-			SELECT b.title, b.votes, v.vote, b.published_Date, 'post' AS type, '/posts' AS link, b.b_id AS id
-			FROM blogs b LEFT JOIN blogvotes v ON b.b_id = v.b_id AND v.u_id = $2 WHERE b.author = $1
+			SELECT b.title, COALESCE(bvotes.votes, 0) AS votes, v.vote, b.published_Date, 'post' AS type, '/posts' AS link, b.b_id AS id
+			FROM blogs b 
+			LEFT JOIN (SELECT b_id, SUM(vote) AS votes FROM blogvotes GROUP BY b_id) bvotes
+			ON bvotes.b_id = b.b_id
+			LEFT JOIN blogvotes v ON b.b_id = v.b_id 
+			AND v.u_id = $2 WHERE b.author = $1
 			) AS res ORDER BY ${order1}, ${order2} LIMIT $3 OFFSET $4`,
 				[userId, senderId, 14, (page - 1) * 14],
 			);
@@ -206,8 +210,12 @@ export const getAllByUserId = catchErrors(async (req, res) => {
 			userSubmissions = await db.query(
 				`
 			SELECT * FROM (
-			SELECT r.title, r.votes, v.vote, r.published_Date, r.thumbnail, 'resource' AS type, '/resources' AS link, r.r_id AS id 
-			FROM resources r LEFT JOIN resourcevotes v ON r.r_id = v.r_id AND v.u_id = $2 WHERE r.author = $1
+			SELECT r.title, COALESCE(rvotes.votes, 0) AS votes, v.vote, r.published_Date, r.thumbnail, 'resource' AS type, '/resources' AS link, r.r_id AS id 
+			FROM resources r 
+			LEFT JOIN 
+			(SELECT r_id, SUM(vote) AS votes FROM resourcevotes GROUP BY r_id) rvotes
+			ON rvotes.r_id = r.r_id
+			LEFT JOIN resourcevotes v ON r.r_id = v.r_id AND v.u_id = $2 WHERE r.author = $1
 			) AS res ORDER BY ${order1}, ${order2} LIMIT $3 OFFSET $4`,
 				[userId, senderId, 14, (page - 1) * 14],
 			);
@@ -216,8 +224,12 @@ export const getAllByUserId = catchErrors(async (req, res) => {
 			userSubmissions = await db.query(
 				`
 			SELECT * FROM (
-			SELECT p.title, p.votes, v.vote, p.published_Date, 'project' AS type, '/projects' AS link, p.project_id AS id
-			FROM projects p LEFT JOIN projectvotes v ON p.project_id = v.project_id AND v.u_id = $2 WHERE p.creator = $1 AND (p.private = false OR p.creator = $2)
+			SELECT p.title, COALESCE(pvotes.votes, 0) AS votes, v.vote, p.published_Date, 'project' AS type, '/projects' AS link, p.project_id AS id
+			FROM projects p 
+			LEFT JOIN (SELECT project_id, SUM(vote) AS votes FROM projectvotes
+				GROUP BY project_id) pvotes
+				ON pvotes.project_id = p.project_id
+			LEFT JOIN projectvotes v ON p.project_id = v.project_id AND v.u_id = $2 WHERE p.creator = $1 AND (p.private = false OR p.creator = $2)
 			) AS res ORDER BY ${order1}, ${order2} LIMIT $3 OFFSET $4`,
 				[userId, senderId, 14, (page - 1) * 14],
 			);
