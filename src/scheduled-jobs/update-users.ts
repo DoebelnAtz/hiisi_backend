@@ -33,7 +33,7 @@ const updateUsers = async () => {
 					location = $6,
 					correction_points = $7,
 					achievement_points = $8,
-					active = $9,
+					active = $9
 					WHERE u_id = $10`,
 				[
 					userinfo.image_url,
