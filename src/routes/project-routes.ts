@@ -1,7 +1,9 @@
 import express from 'express';
 import { check } from 'express-validator';
 
+import * as boardControllers from '../controllers/board-controllers';
 const projectControllers = require('../controllers/project-controllers');
+
 const projectRouter = express.Router();
 
 projectRouter.post(
@@ -14,12 +16,12 @@ projectRouter.post(
 			.not()
 			.isEmpty(),
 	],
-	projectControllers.addTaskToBoard,
+	boardControllers.addTaskToBoard,
 );
 
 projectRouter.get('/', projectControllers.getProjects);
 
-projectRouter.get('/boards/:bid', projectControllers.getBoardById);
+projectRouter.get('/boards/:bid', boardControllers.getBoardById);
 
 projectRouter.post(
 	'/create_project',
@@ -35,9 +37,10 @@ projectRouter.post(
 			.isEmpty(),
 		check('private')
 			.not()
-			.isEmpty()
-	]
-	,projectControllers.createProject);
+			.isEmpty(),
+	],
+	projectControllers.createProject,
+);
 
 projectRouter.post(
 	'/vote_project',
@@ -80,7 +83,7 @@ projectRouter.delete(
 	projectControllers.deleteProject,
 );
 
-projectRouter.get('/boards/tasks/:tid', projectControllers.getTaskById);
+projectRouter.get('/boards/tasks/:tid', boardControllers.getTaskById);
 
 projectRouter.get('/collaborators', projectControllers.getProjectCollaborators);
 
@@ -98,7 +101,22 @@ projectRouter.post(
 			.isEmpty()
 			.isNumeric(),
 	],
-	projectControllers.addCollaboratorToTask,
+	boardControllers.addCollaboratorToTask,
+);
+
+projectRouter.delete(
+	'/boards/tasks/remove_user',
+	[
+		check('userId')
+			.not()
+			.isEmpty()
+			.isNumeric(),
+		check('taskId')
+			.not()
+			.isEmpty()
+			.isNumeric(),
+	],
+	boardControllers.removeCollaboratorFromTask,
 );
 
 projectRouter.put(
@@ -112,7 +130,7 @@ projectRouter.put(
 			.isEmpty()
 			.isNumeric(),
 	],
-	projectControllers.updateTask,
+	boardControllers.updateTask,
 );
 
 projectRouter.put(
@@ -127,7 +145,7 @@ projectRouter.put(
 			.isEmpty()
 			.isNumeric(),
 	],
-	projectControllers.updateTaskPosition,
+	boardControllers.updateTaskPosition,
 );
 
 projectRouter.put(
@@ -162,7 +180,7 @@ projectRouter.put(
 			.isEmpty()
 			.isNumeric(),
 	],
-	projectControllers.updateColumn,
+	boardControllers.updateColumn,
 );
 
 projectRouter.delete(
@@ -173,7 +191,22 @@ projectRouter.delete(
 			.isEmpty()
 			.isNumeric(),
 	],
-	projectControllers.deleteTask,
+	boardControllers.deleteTask,
+);
+
+projectRouter.delete(
+	'/remove_collaborator',
+	[
+		check('projectId')
+			.not()
+			.isEmpty()
+			.isNumeric(),
+		check('userId')
+			.not()
+			.isEmpty()
+			.isNumeric(),
+	],
+	projectControllers.removeProjectCollaborator,
 );
 
 module.exports = projectRouter;

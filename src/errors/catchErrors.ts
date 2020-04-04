@@ -22,7 +22,7 @@ export const catchErrors = (
 		} catch (error) {
 			next(
 				new CustomError(
-					error.message || errorMessage,
+					error.response?.length ? error.response : errorMessage,
 					error.status || 500,
 					error.description || error,
 					error.code,

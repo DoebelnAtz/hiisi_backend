@@ -1,9 +1,9 @@
 import { catchErrors } from '../errors/catchErrors';
 import CustomError from '../errors/customError';
 import { transaction } from '../errors/transaction';
+import db from '../postgres/queries';
 
 const { errorLogger } = require('../logger');
-import db from '../postgres/queries';
 
 export const getBlogs = catchErrors(async (req, res) => {
 	const senderId = req.decoded.u_id; // get sender id from decoded token
@@ -158,61 +158,57 @@ export const voteBlog = catchErrors(async (req, res) => {
 
 	const client = await db.connect();
 
-	try {
-		await client.query('BEGIN');
-		if (!!voteTarget) {
-			switch (vote) {
-				case 0:
-					vote = -voteTarget.vote;
-					console.log(blogId, userId);
-					await client.query(
-						`DELETE FROM blogvotes WHERE b_id = $1 AND u_id = $2`,
-						[blogId, userId],
-					);
-					break;
-				case 1:
-					vote = 2;
-					await client.query(
-						`UPDATE blogvotes
+	await transaction(
+		async () => {
+			if (!!voteTarget) {
+				switch (vote) {
+					case 0:
+						vote = -voteTarget.vote;
+						await client.query(
+							`DELETE FROM blogvotes WHERE b_id = $1 AND u_id = $2`,
+							[blogId, userId],
+						);
+						break;
+					case 1:
+						vote = 2;
+						await client.query(
+							`UPDATE blogvotes
                             SET vote = 1 
                             WHERE b_id = $1 AND u_id = $2`,
-						[blogId, userId],
-					);
-					break;
-				case -1:
-					vote = -2;
-					await client.query(
-						`UPDATE blogvotes
+							[blogId, userId],
+						);
+						break;
+					case -1:
+						vote = -2;
+						await client.query(
+							`UPDATE blogvotes
                             SET vote = -1 
                             WHERE b_id = $1 AND u_id = $2`,
-						[blogId, userId],
-					);
-					break;
-				default:
-					errorLogger.error(
-						'Failed to vote blog: Invalid vote input',
-					);
-					return res.status(500).json({
-						success: false,
-						status: 'error',
-						message: 'Failed to vote blog.',
-					});
-			}
-		} else {
-			await client.query(
-				`INSERT INTO 
+							[blogId, userId],
+						);
+						break;
+					default:
+						errorLogger.error(
+							'Failed to vote blog: Invalid vote input',
+						);
+						return res.status(500).json({
+							success: false,
+							status: 'error',
+							message: 'Failed to vote blog.',
+						});
+				}
+			} else {
+				await client.query(
+					`INSERT INTO 
                     blogvotes (b_id, u_id, vote) 
                     VALUES ($1, $2, $3)`,
-				[blogId, userId, vote],
-			);
-		}
-		await client.query('COMMIT');
-	} catch (e) {
-		await client.query('ROLLBACK');
-		throw new Error('Failed to vote on blog');
-	} finally {
-		client.release();
-	}
+					[blogId, userId, vote],
+				);
+			}
+		},
+		client,
+		'Failed to vote on post',
+	);
 	res.json({ success: true });
 }, 'Failed to vote on post');
 

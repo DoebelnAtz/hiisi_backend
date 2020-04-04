@@ -144,7 +144,7 @@ const login = catchErrors(async (req, res, next) => {
 
 	let refreshToken = jwt.sign(
 		{ username: username, u_id: existingUser.u_id },
-		config.secret,
+		config.refreshSecret,
 		{
 			expiresIn: '4d', // expires in 4 days
 		},
@@ -247,7 +247,7 @@ const refreshToken = catchErrors(async (req, res) => {
 	if (refreshToken) {
 		jwt.verify(
 			refreshToken,
-			config.secret,
+			config.refreshSecret,
 			(err: JsonWebTokenError, decoded: any) => {
 				if (err) {
 					throw new CustomError('Failed to refresh token', 401);
@@ -262,7 +262,7 @@ const refreshToken = catchErrors(async (req, res) => {
 
 					let refreshToken = jwt.sign(
 						{ username: decoded.username, u_id: decoded.u_id },
-						config.secret,
+						config.refreshSecret,
 						{
 							expiresIn: '4d', // expires in 4 days
 						},

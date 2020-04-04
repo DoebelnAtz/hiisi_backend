@@ -11,7 +11,7 @@ export const transaction = async (
 		await client.query('COMMIT');
 	} catch (e) {
 		await client.query('ROLLBACK');
-		throw new CustomError(errorMessage, 500);
+		throw new CustomError(errorMessage, 500, e);
 	} finally {
 		client.release();
 	}
