@@ -15,7 +15,11 @@ const signUp = catchErrors(async (req, res) => {
 	const { username, password } = req.body;
 	let intraId = users.find((user: { login: string; id: number }) => {
 		return user.login === username;
-	}).id;
+	});
+
+	if (!(intraId = intraId?.id)) {
+		throw new CustomError('Unrecognized username', 403);
+	}
 
 	let existingUser = await db.query(
 		'SELECT * FROM users WHERE username = $1',
