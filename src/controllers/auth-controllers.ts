@@ -18,7 +18,11 @@ const signUp = catchErrors(async (req, res) => {
 	});
 
 	if (!(intraId = intraId?.id)) {
-		throw new CustomError('Unrecognized username', 403);
+		throw new CustomError(
+			'Unrecognized username',
+			403,
+			`Failed to sign up: unrecognized username`,
+		);
 	}
 
 	let existingUser = await db.query(
@@ -29,7 +33,11 @@ const signUp = catchErrors(async (req, res) => {
 	existingUser = existingUser.rows[0]; // can't do db.query().rows[0] directly
 
 	if (existingUser) {
-		throw new CustomError('User already exists', 401);
+		throw new CustomError(
+			'User already exists',
+			401,
+			`Failed to sign up: user ${username} already exists`,
+		);
 	}
 
 	let hashedPassword;
@@ -83,12 +91,12 @@ const signUp = catchErrors(async (req, res) => {
 		);
 		await client.query('COMMIT');
 	} catch (e) {
-		errorLogger.error('Failed to create user: ' + e);
 		await client.query('ROLLBACK');
-		return res.status(500).json({
-			status: 'Error',
-			message: 'Failed to create user',
-		});
+		throw new CustomError(
+			'Failed to create user',
+			500,
+			'Failed to create user: ' + e,
+		);
 	} finally {
 		client.release();
 	}
@@ -100,43 +108,40 @@ const login = catchErrors(async (req, res, next) => {
 	const { username, password } = req.body;
 
 	let existingUser;
-	try {
-		existingUser = await db.query(
-			'SELECT username, u_id, password FROM users WHERE username = $1',
-			[username.toLowerCase()],
-		);
-		existingUser = existingUser.rows[0];
-	} catch (e) {
-		console.log(e);
-		return res.status(500).json({
-			status: 'error',
-			message: 'Log in failed, please try again later.',
-		});
-	}
 
+	existingUser = await db.query(
+		'SELECT username, u_id, password FROM users WHERE username = $1',
+		[username.toLowerCase()],
+	);
+	existingUser = existingUser.rows[0];
+
+	// Even though this seems like a 404 error we don't want to return information
+	// on whether or not a user exists
 	if (!existingUser) {
-		return res.status(401).json({
-			status: 'error',
-			message: 'Invalid credentials, please try again.',
-		});
+		throw new CustomError(
+			`Failed to log in: invalid credentials`,
+			401,
+			`Failed to log in did not find user: ${username}`,
+		);
 	}
 
 	let isValidPass = false;
 	try {
 		isValidPass = await bcrypt.compare(password, existingUser.password);
 	} catch (e) {
-		console.log(e);
-		return res.status(500).json({
-			status: 'error',
-			message: 'Log in failed, please try again later.',
-		});
+		throw new CustomError(
+			`Failed to log in`,
+			500,
+			`Bcrypt failed to compare passwords`,
+		);
 	}
 
 	if (!isValidPass) {
-		return res.status(401).json({
-			status: 'error',
-			message: 'Invalid credentials, please try again.',
-		});
+		throw new CustomError(
+			`Failed to log in: invalid credentials`,
+			401,
+			`Invalid credentials`,
+		);
 	}
 	let token = jwt.sign(
 		{ username: username, u_id: existingUser.u_id },
@@ -176,6 +181,11 @@ const login = catchErrors(async (req, res, next) => {
 		await client.query('COMMIT');
 	} catch (e) {
 		await client.query('ROLLBACK');
+		throw new CustomError(
+			`Failed to log in`,
+			500,
+			`Failed to log in: ${e}`,
+		);
 	} finally {
 		client.release();
 	}
@@ -242,7 +252,11 @@ const changePassword = catchErrors(async (req, res) => {
 const refreshToken = catchErrors(async (req, res) => {
 	let refreshToken = req.headers['x-refresh-token'] as string;
 	if (!refreshToken) {
-		throw new CustomError('Failed to refresh token', 401);
+		throw new CustomError(
+			'Failed to refresh token',
+			401,
+			'Failed to find refresh token header',
+		);
 	}
 	if (refreshToken.startsWith('Bearer ')) {
 		refreshToken = refreshToken.slice(7, refreshToken.length);
@@ -254,7 +268,11 @@ const refreshToken = catchErrors(async (req, res) => {
 			config.refreshSecret,
 			(err: JsonWebTokenError, decoded: any) => {
 				if (err) {
-					throw new CustomError('Failed to refresh token', 401);
+					throw new CustomError(
+						'Failed to refresh token',
+						401,
+						'Failed to verify refresh token',
+					);
 				} else {
 					let token = jwt.sign(
 						{ username: decoded.username, u_id: decoded.u_id },

@@ -30,6 +30,16 @@ resourceRouter.post(
 );
 
 resourceRouter.post(
+	'/create_tag',
+	[
+		check('tagTitle')
+			.not()
+			.isEmpty(),
+	],
+	resourceController.createTag,
+);
+
+resourceRouter.post(
 	'/save_resource',
 	[
 		check('rId')

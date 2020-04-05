@@ -3,6 +3,7 @@ import CustomError from '../errors/customError';
 import { errorLogger } from '../logger';
 
 import db from '../postgres/queries';
+import { transaction } from '../errors/transaction';
 const urlMetadata = require('url-metadata');
 var URL = require('url').URL;
 
@@ -331,6 +332,40 @@ export const searchTags = catchErrors(async (req, res) => {
 
 	res.json(tags);
 }, 'Failed to find tags');
+
+export const createTag = catchErrors(async (req, res) => {
+	const { tagTitle } = req.body;
+
+	let color = await db.query(`SELECT color, tc_id FROM tagcolors LIMIT 1`);
+
+	if (!color.rows.length) {
+		throw new CustomError(
+			'Failed to create tag',
+			404,
+			'Failed to create tag: no more unused colors in database',
+		);
+	} else {
+		color = color.rows[0];
+	}
+	const client = await db.connect();
+	let createdTag: any;
+	await transaction(
+		async () => {
+			createdTag = await client.query(
+				`INSERT INTO tags (title, color)
+		VALUES ($1, $2) RETURNING *`,
+				[tagTitle, color.color],
+			);
+			createdTag = createdTag.rows[0];
+			await client.query(`DELETE FROM tagcolors WHERE tc_id = $1`, [
+				color.tc_id,
+			]);
+		},
+		client,
+		'Failed to create tag',
+	);
+	res.status(201).json(createdTag);
+});
 
 export const updateResource = catchErrors(async (req, res) => {
 	let { resource } = req.body;
