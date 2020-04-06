@@ -123,13 +123,7 @@ export const unSaveResource = catchErrors(async (req, res) => {
 		await client.query('COMMIT');
 	} catch (e) {
 		await client.query('ROLLBACK');
-		errorLogger.error('Failed to un-save resource: ' + e);
-		throw Error;
-		// return res.status(500).json({
-		// 	success: false,
-		// 	status: 'error',
-		// 	message: 'Failed to un-save resource.',
-		// });
+		throw new CustomError('Failed to un-save resource', 500, e);
 	} finally {
 		client.release();
 	}
@@ -325,8 +319,8 @@ export const searchTags = catchErrors(async (req, res) => {
 	let limit = req.query.limit;
 	let tags;
 	tags = await db.query(
-		'SELECT * FROM tags WHERE title LIKE $1 ORDER BY title ASC LIMIT $2',
-		[query + '%', limit],
+		'SELECT * FROM tags WHERE LOWER(title) LIKE $1 ORDER BY title ASC LIMIT $2',
+		[query.toLowerCase() + '%', limit],
 	);
 	tags = tags.rows;
 
