@@ -22,7 +22,6 @@ const updateUsers = async () => {
 			let userinfo = await api.intraApi('/users/' + users[i].intraid);
 			await utils.sleep(1000);
 			await utils.sleep(1000);
-			accessLogger.info(JSON.stringify(users[i]));
 			await client.query(
 				`UPDATE users SET
 					profile_pic = $1,

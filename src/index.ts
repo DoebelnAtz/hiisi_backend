@@ -35,7 +35,7 @@ const io = require('socket.io')(process.env.SOCKET_PORT || 5010, {
 });
 io.origins('*:*'); // allow all request origins for sockets
 
-schedule.scheduleJob('*/30 * * * * ', userJobs.update); // execute job every X minutes, cron-like syntax
+schedule.scheduleJob('* 2 * * * ', userJobs.update); // execute job every X minutes, cron-like syntax
 
 app.use(cors());
 app.use(express.json());
