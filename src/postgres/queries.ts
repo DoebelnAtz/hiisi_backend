@@ -1,15 +1,15 @@
 const pg = require('pg');
 
 const pool = new pg.Pool({
-	user: 'admin',
-	host: '207.154.211.76',
+	user: 'root',
+	host: '161.35.20.240',
 	database: 'hivemind',
 	password: process.env.db,
 });
 
 const client = new pg.Client({
-	user: 'admin',
-	host: '207.154.211.76',
+	user: 'root',
+	host: '161.35.20.240',
 	database: 'hivemind',
 	password: process.env.db,
 });
@@ -26,7 +26,6 @@ client.connect(function(err: Error) {
 			return console.error('error running query', err);
 		}
 		console.log(result.rows[0].theTime);
-		// >> output: 2018-08-23T14:02:57.117Z
 		client.end();
 	});
 });
