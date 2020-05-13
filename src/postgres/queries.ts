@@ -2,14 +2,14 @@ const pg = require('pg');
 
 const pool = new pg.Pool({
 	user: 'root',
-	host: '161.35.20.240',
+	host: '127.0.0.1',
 	database: 'hivemind',
 	password: process.env.db,
 });
 
 const client = new pg.Client({
 	user: 'root',
-	host: '161.35.20.240',
+	host: '127.0.0.1',
 	database: 'hivemind',
 	password: process.env.db,
 });

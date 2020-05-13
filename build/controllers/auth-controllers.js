@@ -17,6 +17,7 @@ const customError_1 = __importDefault(require("../errors/customError"));
 const api = require('../scheduled-jobs/api');
 const bcrypt = require('bcryptjs');
 const queries_1 = __importDefault(require("../postgres/queries"));
+const logger_1 = require("../logger");
 const { errorLogger } = require('../logger');
 let jwt = require('jsonwebtoken');
 let config = require('../config');
@@ -87,6 +88,7 @@ const signUp = catchErrors_1.catchErrors((req, res) => __awaiter(void 0, void 0,
     finally {
         client.release();
     }
+    logger_1.accessLogger.info(`Created user: ${createdUser.username}`);
     res.status(201).json({ createdUser: createdUser });
 }), 'Failed to create user');
 const login = catchErrors_1.catchErrors((req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
@@ -140,6 +142,7 @@ const login = catchErrors_1.catchErrors((req, res, next) => __awaiter(void 0, vo
     finally {
         client.release();
     }
+    logger_1.accessLogger.info(`Logged in user: ${username}`);
     res.json({
         success: true,
         message: 'Authentication successful!',

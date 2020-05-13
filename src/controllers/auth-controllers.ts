@@ -5,6 +5,7 @@ import { JsonWebTokenError } from 'jsonwebtoken';
 const api = require('../scheduled-jobs/api');
 const bcrypt = require('bcryptjs');
 import db from '../postgres/queries';
+import { accessLogger } from '../logger';
 const { errorLogger } = require('../logger');
 let jwt = require('jsonwebtoken');
 let config = require('../config');
@@ -100,7 +101,7 @@ const signUp = catchErrors(async (req, res) => {
 	} finally {
 		client.release();
 	}
-
+	accessLogger.info(`Created user: ${createdUser.username}`);
 	res.status(201).json({ createdUser: createdUser });
 }, 'Failed to create user');
 
@@ -189,7 +190,7 @@ const login = catchErrors(async (req, res, next) => {
 	} finally {
 		client.release();
 	}
-
+	accessLogger.info(`Logged in user: ${username}`);
 	// return the JWT token for the future API calls
 	res.json({
 		success: true,
