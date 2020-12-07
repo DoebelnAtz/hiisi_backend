@@ -11,6 +11,7 @@ export const createProject = catchErrors(async (req, res) => {
 	const { title, link, description, private: privateProject } = req.body;
 
 	let createdProject;
+	let project;
 	const client = await db.connect();
 	try {
 		await client.query('BEGIN');
@@ -18,7 +19,6 @@ export const createProject = catchErrors(async (req, res) => {
 			`INSERT INTO commentthreads DEFAULT VALUES 
 			RETURNING t_id`,
 		);
-		commentthread = commentthread.rows[0];
 		let chatthread = await client.query(
 			`INSERT INTO 
 			threads (thread_name, project_thread)
@@ -26,7 +26,6 @@ export const createProject = catchErrors(async (req, res) => {
 			RETURNING t_id`,
 			[title],
 		);
-		chatthread = chatthread.rows[0];
 		createdProject = await client.query(
 			`INSERT INTO projects 
 			(title, description, link, t_id, commentthread, creator, private) 
@@ -35,19 +34,17 @@ export const createProject = catchErrors(async (req, res) => {
 				title,
 				description,
 				link,
-				chatthread.t_id,
-				commentthread.t_id,
+				chatthread.rows[0].t_id,
+				commentthread.rows[0].t_id,
 				userId,
 				privateProject,
 			],
 		);
-		createdProject = createdProject.rows[0];
 		let board = await client.query(
 			`INSERT INTO boards (title, project_id) 
 			VALUES ($1, $2) RETURNING board_id`,
-			[title, createdProject.project_id],
+			[title, createdProject.rows[0].project_id],
 		);
-		board = board.rows[0];
 		let boardTitles = [
 			'Backlog',
 			'Breakdown',
@@ -61,28 +58,30 @@ export const createProject = catchErrors(async (req, res) => {
 				`INSERT INTO boardcolumns 
 				(board_id, title, wip_limit) VALUES 
 				($1, $2, ${!i ? null : 2})`,
-				[board.board_id, boardTitles[i]],
+				[board.rows[0].board_id, boardTitles[i]],
 			);
 		}
 		await client.query(
 			`INSERT INTO projectcollaborators 
 			(u_id, project_id) VALUES ($1, $2) RETURNING
 			project_id, u_id`,
-			[userId, createdProject.project_id],
+			[userId, createdProject.rows[0].project_id],
 		);
 		await client.query(
 			`INSERT INTO threadconnections 
 			(user_id, thread_id) VALUES ($1, $2)`,
-			[userId, chatthread.t_id],
+			[userId, chatthread.rows[0].t_id],
 		);
 		let collaborators = await client.query(
 			`SELECT u.username, u.profile_pic, u.u_id
 			FROM users u JOIN projectcollaborators c ON c.u_id = u.u_id 
 			WHERE c.project_id = $1`,
-			[createdProject.project_id],
+			[createdProject.rows[0].project_id],
 		);
-		collaborators = collaborators.rows;
-		createdProject = { ...createdProject, collaborators: collaborators };
+		project = {
+			...createdProject.rows[0],
+			collaborators: collaborators.rows,
+		};
 		await client.query('COMMIT');
 	} catch (e) {
 		await client.query('ROLLBACK');
@@ -97,7 +96,7 @@ export const createProject = catchErrors(async (req, res) => {
 	} finally {
 		client.release();
 	}
-	res.json(createdProject);
+	res.json(project);
 }, 'Failed to create project');
 
 export const getProjects = catchErrors(async (req, res) => {
@@ -151,9 +150,8 @@ export const getProjects = catchErrors(async (req, res) => {
 			ORDER BY ${order1}, ${order2} LIMIT $2 OFFSET $3`,
 		[userId, perPage, (page - 1) * perPage],
 	);
-	projects = projects.rows;
 
-	res.json(projects);
+	res.json(projects.rows);
 }, 'Failed to get projects');
 
 export const getProjectById = catchErrors(async (req, res) => {
@@ -176,11 +174,10 @@ export const getProjectById = catchErrors(async (req, res) => {
 			'JOIN projectcollaborators c ON c.u_id = u.u_id AND c.project_id = $1',
 		[projectId],
 	);
-	collaborators = collaborators.rows;
-	for (var i = 0; i < collaborators.length; i++) {
-		if (collaborators[i].u_id === userId) contributor = true;
+	for (var i = 0; i < collaborators.rows.length; i++) {
+		if (collaborators.rows[i].u_id === userId) contributor = true;
 	}
-	res.json({ ...project, contributor, collaborators });
+	res.json({ ...project, contributor, collaborators: collaborators.rows });
 }, 'Failed to get project by id');
 
 export const getProjectCollaborators = catchErrors(async (req, res) => {
@@ -192,8 +189,8 @@ export const getProjectCollaborators = catchErrors(async (req, res) => {
 	        ON c.u_id = u.u_id WHERE c.project_id = $1`,
 		[projectId],
 	);
-	collaborators = collaborators.rows;
-	res.json(collaborators);
+
+	res.json(collaborators.rows);
 }, 'Failed to get project collaborators');
 
 export const updateProject = catchErrors(async (req, res) => {
@@ -224,16 +221,15 @@ export const voteProject = catchErrors(async (req, res) => {
 		`SELECT u_id, vote, project_id FROM projectvotes WHERE project_id = $1 AND u_id = $2`,
 		[projectId, userId],
 	);
-	voteTarget = voteTarget.rows[0];
 
 	const client = await db.connect();
-
+	console.log(voteTarget.rows[0]);
 	try {
 		await client.query('BEGIN');
-		if (!!voteTarget) {
+		if (!!voteTarget.rows[0]) {
 			switch (vote) {
 				case 0:
-					vote = -voteTarget.vote;
+					vote = -voteTarget.rows[0].vote;
 					await client.query(
 						`DELETE FROM projectvotes 
                             WHERE project_id = $1 AND u_id = $2`,
@@ -272,6 +268,7 @@ export const voteProject = catchErrors(async (req, res) => {
 		await client.query('COMMIT');
 	} catch (e) {
 		await client.query('ROLLBACK');
+		console.log(e);
 		throw new Error('Failed to vote on project');
 	} finally {
 		client.release();

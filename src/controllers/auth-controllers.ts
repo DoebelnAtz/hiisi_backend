@@ -101,6 +101,7 @@ const signUp = catchErrors(async (req, res) => {
 	} finally {
 		client.release();
 	}
+	// @ts-ignore
 	accessLogger.info(`Created user: ${createdUser.username}`);
 	res.status(201).json({ createdUser: createdUser });
 }, 'Failed to create user');
@@ -125,7 +126,6 @@ const login = catchErrors(async (req, res, next) => {
 			`Failed to log in did not find user: ${username}`,
 		);
 	}
-
 	let isValidPass = false;
 	try {
 		isValidPass = await bcrypt.compare(password, existingUser.password);

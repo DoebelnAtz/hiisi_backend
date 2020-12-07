@@ -123,12 +123,11 @@ export const createBlog = catchErrors(async (req, res) => {
 			`INSERT INTO commentthreads
 			DEFAULT VALUES RETURNING t_id`,
 		);
-		res = res.rows[0];
 		createdBlog = await client.query(
 			`INSERT INTO blogs(title, content, author, commentthread)
 				VALUES($1, $2, $3, $4) 
 				RETURNING b_id, title, content, author, commentthread, votes, published_date`,
-			[title, content, authorId, res.t_id],
+			[title, content, authorId, res.rows[0].t_id],
 		);
 		await client.query('COMMIT');
 	} catch (e) {
@@ -154,16 +153,14 @@ export const voteBlog = catchErrors(async (req, res) => {
 		[blogId, userId],
 	);
 
-	voteTarget = voteTarget.rows[0];
-
 	const client = await db.connect();
 
 	await transaction(
 		async () => {
-			if (!!voteTarget) {
+			if (!!voteTarget.rows[0]) {
 				switch (vote) {
 					case 0:
-						vote = -voteTarget.vote;
+						vote = -voteTarget.rows[0].vote;
 						await client.query(
 							`DELETE FROM blogvotes WHERE b_id = $1 AND u_id = $2`,
 							[blogId, userId],
@@ -239,7 +236,6 @@ export const deleteBlog = catchErrors(async (req, res) => {
 	if (blogToDelete.rows.length !== 1) {
 		throw new CustomError('Failed to find post with provided id', 404);
 	}
-	blogToDelete = blogToDelete.rows[0];
 	const client = await db.connect();
 
 	await transaction(
@@ -251,7 +247,7 @@ export const deleteBlog = catchErrors(async (req, res) => {
 			await client.query(
 				`
 			DELETE FROM commentthreads WHERE t_id = $1`,
-				[blogToDelete.commentthread],
+				[blogToDelete.rows[0].commentthread],
 			);
 		},
 		client,

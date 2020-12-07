@@ -26,14 +26,13 @@ export const getMessagesByThreadId = catchErrors(async (req, res) => {
             AS mes ORDER BY mes.time_sent ASC`,
 		[threadId, 20, (page - 1) * 20],
 	);
-	messages = messages.rows;
 
 	await db.query(
 		`UPDATE online_users SET last_updated = NOW() WHERE u_id = $1 RETURNING u_id`,
 		[req.decoded.u_id],
 	);
 
-	res.json({ title: isAllowed.rows[0].thread_name, messages });
+	res.json({ title: isAllowed.rows[0].thread_name, messages: messages.rows });
 }, 'Failed to get messages');
 
 export const getUsersInThread = catchErrors(async (req, res) => {
@@ -44,9 +43,8 @@ export const getUsersInThread = catchErrors(async (req, res) => {
 			'JOIN threadconnections ON user_id = u_id WHERE thread_id = $1',
 		[threadId],
 	);
-	users = users.rows;
 
-	res.json(users);
+	res.json(users.rows);
 }, 'Failed to get users connected to thread');
 
 export const getThreadsByUserId = catchErrors(async (req, res) => {
@@ -60,14 +58,13 @@ export const getThreadsByUserId = catchErrors(async (req, res) => {
 				WHERE users.u_id = $1`,
 		[userId],
 	);
-	threads = threads.rows;
 
 	await db.query(
 		`UPDATE online_users SET last_updated = NOW() WHERE u_id = $1 RETURNING u_id`,
 		[req.decoded.u_id],
 	);
 
-	res.json(threads);
+	res.json(threads.rows);
 }, 'Failed to get messages');
 
 export const createNewThread = catchErrors(async (req, res) => {
@@ -143,15 +140,14 @@ export const deleteThread = catchErrors(async (req, res) => {
 	        WHERE thread_id = $1`,
 		[targetId],
 	);
-	deleteTarget = deleteTarget.rows;
-	if (!deleteTarget.length) {
+	if (!deleteTarget.rows.length) {
 		throw new CustomError('Failed to find thread with provided id', 404);
 	} else if (
-		!deleteTarget.find((thread: any) => thread.user_id === senderId)
+		!deleteTarget.rows.find((thread: any) => thread.user_id === senderId)
 	) {
 		throw new CustomError('Unauthorized sender', 401);
 	}
-	if (deleteTarget.length === 1) {
+	if (deleteTarget.rows.length === 1) {
 		fullDelete = true;
 	}
 

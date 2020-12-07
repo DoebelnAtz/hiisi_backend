@@ -28,10 +28,9 @@ export const getCommentThreadById = catchErrors(async (req, res) => {
 		) SELECT * FROM cmts ORDER BY comment_date ASC`,
 		[tid],
 	);
-	commentThread = commentThread.rows;
 
 	// we don't return a 404 here because a comment thread might be empty
-	res.json(commentThread);
+	res.json(commentThread.rows);
 }, 'Failed to get comments');
 
 export const createComment = catchErrors(async (req, res) => {
@@ -95,11 +94,8 @@ export const deleteComment = catchErrors(async (req, res) => {
 			`Failed to find comment to delete with provided comment id`,
 			404,
 		);
-	} else {
-		commentToDelete = commentToDelete.rows;
-		commentToDelete = commentToDelete[0];
 	}
-	if (commentToDelete.author !== req.decoded.u_id) {
+	if (commentToDelete.rows[0].author !== req.decoded.u_id) {
 		throw new CustomError('Unauthorized comment deletion', 403);
 	}
 	const client = await db.connect();

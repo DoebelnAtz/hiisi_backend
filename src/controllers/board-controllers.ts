@@ -9,9 +9,8 @@ export const updateColumn = catchErrors(async (req, res) => {
             RETURNING title`,
 		[title, wipLimit, columnId],
 	);
-	newTitle = newTitle.rows[0];
 
-	res.json({ title: newTitle.title });
+	res.json({ title: newTitle.rows[0].title });
 }, 'Failed to update column title');
 
 export const updateTaskPosition = catchErrors(async (req, res) => {
@@ -56,7 +55,6 @@ export const deleteTask = catchErrors(async (req, res) => {
 	        WHERE t.task_id = $1 AND c.u_id = $2`,
 		[taskId, senderId],
 	);
-	targetTask = targetTask.rows[0];
 
 	const client = await db.connect();
 
@@ -71,12 +69,12 @@ export const deleteTask = catchErrors(async (req, res) => {
         `,
 			[taskId],
 		);
-		if (targetTask.commentthread) {
+		if (targetTask.rows[0].commentthread) {
 			await client.query(
 				`
                 DELETE FROM commentthreads WHERE t_id = $1
             `,
-				[targetTask.commentthread],
+				[targetTask.rows[0].commentthread],
 			);
 		}
 		await client.query('COMMIT');
@@ -131,9 +129,8 @@ export const addCollaboratorToTask = catchErrors(async (req, res) => {
 				WHERE t.task_id = $1`,
 		[taskId],
 	);
-	collaborators = collaborators.rows;
 
-	res.status(201).json({ collaborators });
+	res.status(201).json({ collaborators: collaborators.rows });
 }, 'Failed to add collaborator to task');
 
 export const removeCollaboratorFromTask = catchErrors(async (req, res) => {
@@ -251,7 +248,6 @@ export const addTaskToBoard = catchErrors(async (req, res) => {
 			WHERE t.task_id = $1`,
 		[createdTask.task_id],
 	);
-	collaborators = collaborators.rows;
 
-	res.status(201).json({ ...createdTask, collaborators: collaborators });
+	res.status(201).json({ ...createdTask, collaborators: collaborators.rows });
 }, 'Failed to add task to board');

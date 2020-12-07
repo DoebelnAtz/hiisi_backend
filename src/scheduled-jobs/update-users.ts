@@ -8,18 +8,20 @@ const updateUsers = async () => {
 
 	try {
 		users = await db.query('SELECT intraid, u_id FROM users');
-		users = users.rows;
 	} catch (e) {
 		errorLogger.error(
 			'Scheduled userupdater failed to get users from database',
 		);
+		return;
 	}
 
 	const client = await db.connect();
 	try {
 		await client.query('BEGIN');
-		for (var i = 0; i < users.length; i++) {
-			let userinfo = await api.intraApi('/users/' + users[i].intraid);
+		for (var i = 0; i < users.rows.length; i++) {
+			let userinfo = await api.intraApi(
+				'/users/' + users.rows[i].intraid,
+			);
 			await utils.sleep(1000);
 			await utils.sleep(1000);
 			await client.query(
@@ -46,7 +48,7 @@ const updateUsers = async () => {
 					userinfo.correction_point,
 					utils.countAchievementPoints(userinfo.achievements),
 					!!userinfo.location,
-					users[i].u_id,
+					users.rows[i].u_id,
 				],
 			);
 		}

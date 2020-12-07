@@ -36,6 +36,7 @@ export const getMe = catchErrors(async (req, res) => {
 	res.json(user);
 }, 'Failed to get current user');
 
+// not used old feature..
 export const getUserFriends = catchErrors(async (req, res) => {
 	const { uid } = req.params;
 
@@ -44,9 +45,8 @@ export const getUserFriends = catchErrors(async (req, res) => {
 			'FROM users JOIN friends ON users.u_id = friends.two_id WHERE friends.one_id = $1',
 		[uid],
 	); // not very descriptive column names (google many to many relationship)...
-	friends = friends.rows;
 
-	res.json(friends);
+	res.json(friends.rows);
 }, 'Failed to get friends');
 
 export const getUsers = catchErrors(async (req, res) => {
@@ -67,9 +67,8 @@ export const getUsers = catchErrors(async (req, res) => {
             achievement_points 
             FROM users`,
 	);
-	users = users.rows;
 
-	res.json(users);
+	res.json(users.rows);
 }, 'Failed to get users');
 
 export const getUserById = catchErrors(async (req, res) => {
@@ -109,8 +108,7 @@ export const getOnlineUsers = catchErrors(async (req, res) => {
 	let users = await db.query(
 		`SELECT u_id, last_updated FROM online_users WHERE last_updated > NOW() - interval '5 minutes'`,
 	);
-	users = users.rows;
-	res.json(users);
+	res.json(users.rows);
 }, 'Failed to get online users');
 
 export const searchUsers = catchErrors(async (req, res) => {
@@ -120,8 +118,7 @@ export const searchUsers = catchErrors(async (req, res) => {
             FROM users WHERE username LIKE $1`,
 		[search + '%'],
 	);
-	usersFound = usersFound.rows;
-	res.json(usersFound);
+	res.json(usersFound.rows);
 }, 'Failed to search for users');
 
 export const getAllByUserId = catchErrors(async (req, res) => {

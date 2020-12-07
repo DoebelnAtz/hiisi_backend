@@ -1,20 +1,25 @@
-const pg = require('pg');
+import pg from 'pg';
 
-const pool = new pg.Pool({
-	user: 'root',
-	host: '127.0.0.1',
-	database: 'hivemind',
-	password: process.env.db,
-});
+const connectionName = process.env.DB_INST;
 
-const client = new pg.Client({
-	user: 'root',
-	host: '127.0.0.1',
-	database: 'hivemind',
-	password: process.env.db,
-});
+const dbConfig = {
+	user: process.env.DB_USER,
+	host: process.env.DB_ADDR,
+	database: process.env.DB_NAME,
+	password: process.env.DB_PASS,
+};
+console.log(dbConfig);
+
+if (process.env.NODE_ENV === 'production') {
+	dbConfig.host = `/cloudsql/${connectionName}`;
+}
+
+const pool = new pg.Pool(dbConfig);
+
+const client = new pg.Client(dbConfig);
 
 client.connect(function(err: Error) {
+	console.log('CONNECTING....');
 	if (err) {
 		return console.error('could not connect to postgres', err);
 	}

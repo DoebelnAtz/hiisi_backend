@@ -11,7 +11,6 @@ require('dotenv').config();
 const schedule = require('node-schedule');
 const authRoutes = require('./routes/auth-routes');
 const userRoutes = require('./routes/user-routes');
-const notificationRoutes = require('./routes/notification-routes');
 const blogRoutes = require('./routes/blog-routes');
 const userJobs = require('./scheduled-jobs/update-users');
 const projectRotes = require('./routes/project-routes');
@@ -46,7 +45,6 @@ io.use((socket: SocketIO.Socket, next: NextFunction) =>
 	middleware.checkSocketToken(socket, next),
 ); // make sure socket requests token is correct;
 app.use('/api/users', userRoutes);
-app.use('/api/notifications', notificationRoutes);
 app.use('/api/resources', resourceRoutes);
 app.use('/api/projects', projectRotes);
 app.use('/api/messages', messageRoutes);

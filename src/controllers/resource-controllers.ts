@@ -179,7 +179,7 @@ export const getResourceById = catchErrors(async (req, res) => {
             WHERE r.r_id = $1`,
 		[resourceId],
 	);
-	resource = {
+	let resourceResult = {
 		...resource.rows[0],
 		owner: resource.rows[0].u_id === senderId,
 	};
@@ -190,9 +190,8 @@ export const getResourceById = catchErrors(async (req, res) => {
 			'ON t.tag_id = c.tag_id WHERE c.r_id = $1',
 		[resourceId],
 	);
-	tags = tags.rows;
-	resource = { ...resource, tags: tags };
-	res.json(resource);
+	let resources = { ...resourceResult, tags: tags.rows };
+	res.json(resources);
 }, 'Failed to get tags for resource');
 
 export const createResource = catchErrors(async (req, res) => {
@@ -338,8 +337,6 @@ export const createTag = catchErrors(async (req, res) => {
 			404,
 			'Failed to create tag: no more unused colors in database',
 		);
-	} else {
-		color = color.rows[0];
 	}
 	const client = await db.connect();
 	let createdTag: any;
@@ -348,11 +345,11 @@ export const createTag = catchErrors(async (req, res) => {
 			createdTag = await client.query(
 				`INSERT INTO tags (title, color)
 		VALUES ($1, $2) RETURNING *`,
-				[tagTitle, color.color],
+				[tagTitle, color.rows[0].color],
 			);
 			createdTag = createdTag.rows[0];
 			await client.query(`DELETE FROM tagcolors WHERE tc_id = $1`, [
-				color.tc_id,
+				color.rows[0].tc_id,
 			]);
 		},
 		client,
@@ -384,16 +381,15 @@ export const voteResource = catchErrors(async (req, res) => {
 		`SELECT c.vote, c.u_id FROM resourcevotes c WHERE c.r_id = $1 AND c.u_id =$2`,
 		[resourceId, userId],
 	);
-	voteTarget = voteTarget.rows[0];
 
 	const client = await db.connect();
 
 	try {
 		await client.query('BEGIN');
-		if (!!voteTarget) {
+		if (!!voteTarget.rows[0]) {
 			switch (vote) {
 				case 0:
-					vote = -voteTarget.vote;
+					vote = -voteTarget.rows[0].vote;
 					await client.query(
 						`DELETE FROM resourcevotes 
                             WHERE r_id = $1 AND u_id = $2`,

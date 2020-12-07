@@ -22,13 +22,12 @@ const searchAll: RequestHandler = catchErrors(async (req, res) => {
 		) AS res WHERE LOWER(res.title) LIKE LOWER($1) LIMIT 10`,
 		[q + '%'],
 	);
-	result = result.rows;
 
 	// First, we get all results that start with the query, if it returns less than 10 we
 	// get anything containing the query (and filter out duplicates), because searching for
 	// items that start with the query is much faster due to postgres btree indexing.
 
-	if (result.length < 10) {
+	if (result.rows.length < 10) {
 		let matched = await db.query(
 			`SELECT * FROM (
 		SELECT u.username AS title, u.u_id AS id, 'user' AS type, '/user' AS link
@@ -43,20 +42,20 @@ const searchAll: RequestHandler = catchErrors(async (req, res) => {
 		SELECT p.title, p.project_id AS id, 'project' AS type, '/projects' AS link 
 		FROM projects p WHERE p.private = FALSE ORDER BY title ASC
 		) AS res WHERE LOWER(res.title) LIKE LOWER($1) LIMIT $2`,
-			['%' + q + '%', 10 - result.length],
+			['%' + q + '%', 10 - result.rows.length],
 		);
-		result = [
-			...result,
+		result.rows = [
+			...result.rows,
 			...matched.rows.filter(
 				(match: { title: any }) =>
-					!result.find(
+					!result.rows.find(
 						(res: { title: any }) => res.title === match.title,
 					),
 			),
 		];
 	}
 
-	res.json(result);
+	res.json(result.rows);
 }, 'Failed to search database');
 
 module.exports = {
